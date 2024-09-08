@@ -1,4 +1,3 @@
-*easyPARM*
 **easyPARM**
 
 Instructions for Running easyPARM
