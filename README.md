@@ -1,6 +1,6 @@
-**easyPARM**
+# **easyPARM**
 
-Instructions for Running easyPARM
+## Instructions for Running easyPARM
 To run the easyPARM code, you will need to provide the following three input files:
 
 1-Checkpoint File (.chk): This file contains the wavefunction and other necessary data from a previous quantum chemistry calculation (Gaussian).
@@ -9,7 +9,7 @@ To run the easyPARM code, you will need to provide the following three input fil
 
 Running the Code
 Once you have the required files, you can run the code using the following command:
-./easyPARM.sh
+`./easyPARM.sh`
 
 Important Notes
 Python 3: Please ensure that Python 3 is installed and available in your environment. The code requires Python 3 to function correctly.
