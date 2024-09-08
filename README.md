@@ -1,4 +1,5 @@
 *easyPARM*
+**easyPARM**
 
 Instructions for Running easyPARM
 To run the easyPARM code, you will need to provide the following three input files:
