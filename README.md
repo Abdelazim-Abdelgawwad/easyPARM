@@ -2,7 +2,7 @@
 **easyPARM** is a computational tool developed by **Abdelazim M. A. Abdelagawwad** under the supervision of **Dr. Antonio Francés-Monerris**. Its primary purpose is to simplify the derivation of force field parameters for metal-containing molecular systems and to enable charge restraints on specific atoms.
 
 ## Key Features
-1. **Force Field Parameter Generation**: easyPARM uses the Seminario method [1] to derive bond-stretching and bond-angle bending parameters for metal-containing systems. These parameters are specifically tailored for the AMBER software suite [2], based on the Hessian matrix from frequency calculations performed with Gaussian.
+1. **Force Field Parameter Generation**: easyPARM uses the Seminario method [1] to derive bond-stretching and bond-angle bending parameters for metal-containing systems. These parameters are optimized for use with the AMBER software suite [2], based on the Hessian matrix from frequency calculations performed with Gaussian. Additionally, the tool can generate parameters for non-metal systems using GAFF or the AMBER force field.. 
 
 2. **Charge Restraint Using REsP Fitting**: easyPARM also supports charge restraints using the Restrained Electrostatic Potential (REsP) fitting approach [3]. This ensures that the electrostatic potential around the molecule is accurate and physically meaningful.
 
@@ -53,6 +53,9 @@ Your leap script should include:
 
 ## Contact & Support
 For troubleshooting or additional assistance, please refer to the documentation in our GitHub repository. You can also reach us via email at: abdelazim.abdelgawwad@uv.es.
+
+## Citation 
+If you use this code in your research, please make sure to cite the original article associated with the code.
 
 ### References
 [1]	Seminar, J. M. Calculation of Intramolecular Force Fields from Second-Derivative Tensors; 1996.
