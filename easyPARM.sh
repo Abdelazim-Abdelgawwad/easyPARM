@@ -6,7 +6,7 @@ ORIGINAL_DIR="$(pwd)"
 # Determine the directory of this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Navigate to the scripts directory (if needed)
+# Navigate to the scripts directory 
 cd "$SCRIPT_DIR/scripts"
 
 # Run the 01_easyPARM.sh script, passing the original working directory as an argument
