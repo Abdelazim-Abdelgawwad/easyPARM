@@ -54,8 +54,8 @@ Your leap script should include:
 ## Contact & Support
 For troubleshooting or additional assistance, please refer to the documentation in our GitHub repository. You can also reach us via email at: abdelazim.abdelgawwad@uv.es.
 
-## Citation 
-If you use this code in your research, please make sure to cite the original article associated with the code.
+## How to cite 
+If you use this code in your research, please cite the original article associated with the code.
 
 ### References
 [1]	Seminar, J. M. Calculation of Intramolecular Force Fields from Second-Derivative Tensors; 1996.
