@@ -13,10 +13,10 @@
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
-# Institut de Ciència Molecular (ICMol), Universitat de València, P.O. Box 22085, València 46071, Spain           #
+# Institut de Ciència Molecular (ICMol), Universitat de València, P.O. Box 22085, València 46071, Spain          #
 #                                                                                                                 #
 #Distributed under the GNU LESSER GENERAL PUBLIC LICENSE Version 2.1, February 1999                               #
-#Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es         #
+#Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es        #
 ###################################################################################################################
 
 # Detect the directory where the current script is located
