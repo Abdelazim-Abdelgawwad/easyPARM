@@ -116,7 +116,7 @@ get_user_input() {
 
     # Get atom type
     echo " "
-    echo "Please select the atom type (recommended: GAFF or AMBER): "
+    echo "Please select the atom type: "
     echo "1- Amber Force Field (AMBER)"
     echo "2- General Amber Force Field (GAFF)"
     echo "3- General Amber Force Field (GAFF2)"
