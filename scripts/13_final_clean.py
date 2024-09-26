@@ -1,5 +1,6 @@
 import re
 
+#READ the bond info from forcefield2.dat
 def read_bond_data(file_path):
     bond_data = set()
     bond_section = False
@@ -20,6 +21,7 @@ def read_bond_data(file_path):
                     bond_data.add(bond)
     return bond_data
 
+#READ the angle info from forcefield2.dat
 def read_angle_data(file_path):
     angle_data = set()
     angle_section = False
@@ -40,6 +42,7 @@ def read_angle_data(file_path):
                     angle_data.add(angle)
     return angle_data
 
+#READ the dihedral info from forcefield2.dat
 def read_dihe_data(file_path):
     dihe_data = set()
     dihe_section = False
@@ -61,7 +64,7 @@ def read_dihe_data(file_path):
                     dihe_data.add(dihe)
                     dihe_data.add(dihe_reversed)
     return dihe_data
-
+#Remove any duplication or unnecessary files
 def process_frcmod_file(reference_file, frcmod_file, output_file):
     # Read reference data
     reference_bonds = read_bond_data(reference_file)
@@ -138,7 +141,7 @@ def process_frcmod_file(reference_file, frcmod_file, output_file):
             else:
                 outfile.write(original_line)
 
-# Call the function with the file paths
+# Call the function 
 reference_file = 'forcefield2.dat'
 frcmod_file = 'updated_updated_COMPLEX_modified2.frcmod'
 output_file = 'filtered_COMPLEX_modified2.frcmod'
