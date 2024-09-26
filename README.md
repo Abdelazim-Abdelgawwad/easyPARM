@@ -81,7 +81,7 @@ You can also reach us via email at: abdelazim.abdelgawwad@uv.es.
 If you use this code in your research, please cite the original article associated with the code.
 
 ### References
-[1]	Seminar, J. M. Calculation of Intramolecular Force Fields from Second-Derivative Tensors; 1996. https://doi.org/https://doi.org/10.1002/(SICI)1097-461X(1996)60:7<1271::AID-QUA8>3.0.CO;2-W.
+[1]	Seminar, J. M. Calculation of Intramolecular Force Fields from Second-Derivative Tensors; 1996. https://doi.org/https://doi.org/10.1002/(SICI)1097-461X(1996)60:7<1271::AID-QUA8>3.0.CO;2-W
 
 [2]	Case, D. A.; Aktulga, H. M.; Belfon, K.; Ben-Shalom, I. Y.; Brozell, S. R.; Cerutti, D. S.; Cheatham 
 III, T. E.; Cisneros, G. A.; Cruzeiro, V. W. D.; Darden, T. A.; Duke, R. E.; Giambasu, G.; Gilson, M. K.; 
@@ -95,7 +95,7 @@ Francisco.      https://ambermd.org/
 
 [3]	Comell, W. D.; Cieplak, P.; Bayly, C. I.; Kollman, P. A. Application of RESP Charges to calculate 
 conformational energies, hydrogen bond energies, and free energies of solvation. Journal of American Chemical 
-Society 1993, 115 (7), 9620â€“9631.   https://doi.org/10.1021/ja00074a030
+Society 1993, 115 (7), 9620-9631.   https://doi.org/10.1021/ja00074a030
 
 [4] Frisch, M. J.; Trucks, G. W.; Schlegel, H. B.; Scuseria, G. E.; Robb, M. a.; Cheeseman, J. R.; Scalmani, 
 G.; Barone, V.; Petersson, G. a.; Nakatsuji, H.; Li, X.; Caricato, M.; Marenich, a. V.; Bloino, J.; Janesko, 
