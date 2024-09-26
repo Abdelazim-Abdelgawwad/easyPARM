@@ -87,7 +87,7 @@ You can also reach us via email at: abdelazim.abdelgawwad@uv.es.
 If you use this code in your research, please cite the original article associated with the code.
 
 ### References
-[1]	Seminar, J. M. Calculation of Intramolecular Force Fields from Second-Derivative Tensors; 1996. https://doi.org/https://doi.org/10.1002/(SICI)1097-461X(1996)60:7<1271::AID-QUA8>3.0.CO;2-W
+[1]	Seminario, J. M. Calculation of Intramolecular Force Fields from Second-Derivative Tensors. Int J Quantum Chem 1996, 60 (7), 1271–1277. https://doi.org/https://doi.org/10.1002/(SICI)1097-461X(1996)60:7<1271::AID-QUA8>3.0.CO;2-W.
 
 [2]	Case, D. A.; Aktulga, H. M.; Belfon, K.; Ben-Shalom, I. Y.; Brozell, S. R.; Cerutti, D. S.; Cheatham 
 III, T. E.; Cisneros, G. A.; Cruzeiro, V. W. D.; Darden, T. A.; Duke, R. E.; Giambasu, G.; Gilson, M. K.; 
