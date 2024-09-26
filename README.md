@@ -29,6 +29,12 @@ chemistry calculation (Gaussian) [4].
 calculation.
 
 ## Running easyPARM
+After downloading the code, if the files `easyPARM.sh`, `01_easyPARM.sh`, `04_parmch2_frcmod.sh`, and `readit` do not have executable permissions, please change their permissions using the following command:
+
+`chmod +x file_name `
+
+To run the code, you have two methods
+
 **Method 1: Direct Script Execution**
 To run the script directly, use the following command:
 
