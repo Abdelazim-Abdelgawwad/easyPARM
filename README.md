@@ -1,7 +1,7 @@
 # **easyPARM**
 
 **easyPARM** is a computational tool developed by **Abdelazim M. A. Abdelagawwad** under the supervision
-of **Dr. Antonio FrancÃ©s-Monerris** at the Institut de Ciència Molecular (ICMol), Universitat de València. 
+of **Dr. Antonio Francés-Monerris** at the Institut de Ciència Molecular (ICMol), Universitat de València. 
 Its primary purpose is to simplify the derivation of force field parameters for metal-containing molecular 
 systems and to enable charge restraints on specific atoms.
 
