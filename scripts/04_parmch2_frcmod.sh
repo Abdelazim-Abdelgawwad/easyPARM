@@ -20,8 +20,6 @@
 
 #!/bin/bash
 
-# 1. Ask the user for the path to Amber
-
 # Get the directory of the bash script
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 
