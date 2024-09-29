@@ -210,7 +210,7 @@ def check_and_extend_bond_data(mol2_filename, distance_type_filename):
     # Update existing bonds and add new ones
     update_bonds_in_mol2(mol2_filename, updated_bonds, new_bonds)
 
-# Example usage
+# Input
 mol2_filename = "COMPLEX.mol2"
 distance_type_filename = "distance_type.dat"
 check_and_extend_bond_data(mol2_filename, distance_type_filename)# Function to insert missing bonds into the mol2 file
