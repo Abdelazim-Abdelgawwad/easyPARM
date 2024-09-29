@@ -196,5 +196,5 @@ def process_frcmod_file(file_path, atomtype_file):
             else:
                 output_file.write(line + "\n")
 
-# Call the function with the file paths
+# Call the function with the input
 process_frcmod_file('updated_COMPLEX_modified2.frcmod', 'new_atomtype.dat')
