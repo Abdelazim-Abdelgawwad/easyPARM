@@ -68,12 +68,10 @@ def read_new_atom_types(file_path):
         print(f"Error reading {file_path}: {str(e)}")
         return set()
 
-
+#Removes lines related to metal atoms from BOND, ANGLE, DIHE, and IMPROPER sections.
+#Does not remove any lines from the NONBON section.
 def remove_metal_lines(input_file, output_file, metal_atom_types):
-    """
-    Removes lines related to metal atoms from BOND, ANGLE, DIHE, and IMPROPER sections.
-    Does not remove any lines from the NONBON section.
-    """
+
     try:
         with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
             current_section = None
@@ -106,10 +104,9 @@ def remove_metal_lines(input_file, output_file, metal_atom_types):
     except Exception as e:
         print(f"Error updating FRCMOD file: {str(e)}")
 
+#Copies the metal-related lines for all sections except NONBON.
 def copy_metal_lines(forcefield_file, output_file, metal_atom_types):
-    """
-    Copies the metal-related lines for all sections except NONBON.
-    """
+
     try:
         with open(forcefield_file, 'r') as infile:
             forcefield_lines = infile.readlines()
@@ -200,10 +197,8 @@ def update_mass_section(input_file, output_file, metal_atom_types, atom_info):
     except Exception as e:
         print(f"Error updating MASS section: {str(e)}")
 
+#Main function that orchestrates the overall workflow.
 def main():
-    """
-    Main function that orchestrates the overall workflow.
-    """
     atom_info = extract_atom_types_from_mol2('COMPLEX.mol2')
 
     # Read metal numbers
