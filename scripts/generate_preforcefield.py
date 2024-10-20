@@ -29,7 +29,7 @@ def is_metal_or_large_atomic_number(atom_name):
     base_symbol = re.match(r'([A-Za-z]+)', atom_name).group(1).lower()
 
     periodic_table = {
-        'al': 13, 'si': 14, 'ar': 18, 'k': 19, 'cr': 24,  
+        'al': 13, 'si': 14, 'ar': 18, 'k': 19, 'cr': 24, 'b': 5, 
         'sc': 21, 'ti': 22, 'v': 23, 'mn': 25, 'fe': 26, 'co': 27, 'ni': 28, 
         'cu': 29, 'zn': 30, 'ga': 31, 'ge': 32, 'as': 33, 'se': 34, 'kr': 36, 'rb': 37,
         'sr': 38, 'y': 39, 'zr': 40, 'nb': 41, 'mo': 42, 'tc': 43, 'ru': 44, 'rh': 45, 'pd': 46,
