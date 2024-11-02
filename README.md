@@ -8,6 +8,8 @@ systems and to enable charge restraints on specific atoms.
 ## How to cite 
 If you use this code in your research, please cite the original article associated with the code.
 
+*Abdelgawwad AMA, Francés-Monerris A. easyPARM: Automated, Versatile, and Reliable Force Field Parameters for Metal-Containing Molecules with Unique Labeling of Coordinating Atoms. ChemRxiv. 2024;* doi:10.26434/chemrxiv2024-f8wp4 
+
 ## Key Features
 1. **Force Field Parameter Generation**: easyPARM uses the Seminario method [1] to derive bond-stretching 
 and bond-angle bending parameters for metal-containing systems. These parameters are optimized for use 
