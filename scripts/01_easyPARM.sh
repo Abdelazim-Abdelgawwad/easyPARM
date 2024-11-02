@@ -19,6 +19,7 @@
 #Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de Valéncia. E-mail: abdelazim.abdelgawwad@uv.es         #
 ###################################################################################################################
 
+echo "Please download the latest version of the code from the GitHub releases page."
 
 # Detect the directory where the current script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
