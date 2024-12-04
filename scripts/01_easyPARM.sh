@@ -264,14 +264,14 @@ run_antechamber_gaussian() {
         # Execute antechamber command with files from RUN_DIR
         antechamber -i "$RUN_DIR/$charge_data" -fi "$input_form" -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -c "$method" -s 2 -rn mol -nc "$charge_total" -j 5 -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1 
         python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/$xyz_file" "$RUN_DIR/COMPLEX.pdb"
-    	python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
+    	python3 "$SCRIPT_DIR/Revise_Atom_Type.py"´> "$RUN_DIR/temp.dat"
 	if [ ! -f "$RUN_DIR/limited_data.dat" ]; then
 		if [ -f "$RUN_DIR/no_metal.dat" ]; then
 			antechamber -i "$RUN_DIR/$charge_data" -fi "$input_form" -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -c "$method" -s 2 -rn mol -nc "$charge_total" -at "$at_type" > "$RUN_DIR/temp.dat" 2>&1
 		else
-    			python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
+    			python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
 			antechamber -i "$RUN_DIR/mol.pdb" -fi pdb -o "$RUN_DIR/ONE.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
-			python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
+			python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
                         if [ -f "$RUN_DIR/ONE.mol2" ]; then
 				mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
                         fi
@@ -328,14 +328,14 @@ run_antechamber_orca() {
 
     # Run antechamber
     antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -at "$at_type" -dr no -j 5 > "$RUN_DIR/temp.dat" 2>&1
-    python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
+    python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
     if [ ! -f "$RUN_DIR/limited_data.dat" ]; then
 	    if [ -f "$RUN_DIR/no_metal.dat" ]; then
 		antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -at "$at_type" > "$RUN_DIR/temp.dat" 2>&1
 	    else 
-		    python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
+		    python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
 		    antechamber -i "$RUN_DIR/mol.pdb" -fi pdb -o "$RUN_DIR/ONE.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>1
-		    python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
+		    python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
                     if [ -f "$RUN_DIR/ONE.mol2" ]; then
 			mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
    		    fi
