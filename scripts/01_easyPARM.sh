@@ -272,7 +272,9 @@ run_antechamber_gaussian() {
     			python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
 			antechamber -i "$RUN_DIR/mol.pdb" -fi pdb -o "$RUN_DIR/ONE.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
 			python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
-			mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
+                        if [ -f "$RUN_DIR/ONE.mol2" ]; then
+				mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
+                        fi
 		fi
 	else 
 		break 
@@ -334,7 +336,9 @@ run_antechamber_orca() {
 		    python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
 		    antechamber -i "$RUN_DIR/mol.pdb" -fi pdb -o "$RUN_DIR/ONE.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>1
 		    python3 "$SCRIPT_DIR/Revise_Atom_Type.py"
-		    mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
+                    if [ -f "$RUN_DIR/ONE.mol2" ]; then
+			mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
+   		    fi
 	    fi
     else 
 	break 
