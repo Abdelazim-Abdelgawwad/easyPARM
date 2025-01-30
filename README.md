@@ -3,9 +3,18 @@
 A new version of **easyPARM (v3.00)** has been released! 🎉  
 This version includes **new features, enhancements, and expanded compatibility.**  
 
-👉 **Check the latest release notes and manual **  
+👉 **Check the latest release notes and the manual **  
 
+## 💡 Contribute & Suggest Improvements  
 
+Do you have ideas for improving **easyPARM**? 🛠️  
+We welcome contributions, feature suggestions, and bug reports!  
+
+- If you have a **feature request** or **improvement suggestion**, feel free to open an [Issue](https://github.com/Abdelazim-Abdelgawwad/easyPARM/issues).  
+- Want to contribute? submit a **Pull Request**.  
+- Join the discussion and share your feedback in the **Discussions** tab!  
+
+Your contributions help make **easyPARM** better for everyone! 🚀  
 # **easyPARM v1.00**
 
 **easyPARM** is a computational tool developed by **Abdelazim M. A. Abdelagawwad** under the supervision
