@@ -3,7 +3,7 @@
 A new version of **easyPARM (v3.00)** has been released! 🎉  
 This version includes **new features, enhancements, and expanded compatibility.**  
 
-👉 **Check the latest release notes **  
+👉 **Check the latest release notes and manual **  
 
 
 # **easyPARM v1.00**
@@ -195,16 +195,13 @@ To address this, modify the allowed bond limit in the AmberTools source code:
 3. Change 8 to the desired number of bonds.
 4. Recompile Amber to apply the changes, allowing tleap to recognize the new MAXBONDS limit.
 
-## Contact & Support
-For troubleshooting or additional assistance, please refer to the documentation in our GitHub repository. You can also reach us via email at: [abdelazim.abdelgawwad@uv.es](mailto:abdelazim.abdelgawwad@uv.es).
-
 ## References
 1- Frank Neese, Frank Wennmohs, Ute Becker, Christoph Riplinger; The ORCA quantum chemistry program package. J. Chem. Phys. 14 June 2020; 152 (22): 224108. https://doi.org/10.1063/5.0004608
 2- Breneman, C.M. and Wiberg, K.B. (1990), Determining atom-centered monopoles from molecular electrostatic potentials. The need for high sampling density in formamide conformational analysis. J. Comput. Chem., 11: 361-373. https://doi.org/10.1002/jcc.540110311
 
-# easyPARM v2.0 Release Notes  
+# easyPARM v3.00 Release Notes  
 
-## 🚀 What's New in v2.0  
+## 🚀 What's New in v3.00  
 
 - **Force Field Parameterization for Metalloproteins**  
 - **Expanded Charge Calculation Support**  
