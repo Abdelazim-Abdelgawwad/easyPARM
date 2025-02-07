@@ -23,9 +23,13 @@ Its primary purpose is to simplify the derivation of force field parameters for 
 systems and to enable charge restraints on specific atoms.
 
 ## How to cite 
-If you use this code in your research, please cite the original article associated with the code.
 
-*Abdelgawwad AMA, Francés-Monerris A. easyPARM: Automated, Versatile, and Reliable Force Field Parameters for Metal-Containing Molecules with Unique Labeling of Coordinating Atoms. ChemRxiv. 2024;* https://doi.org/10.26434/chemrxiv-2024-f8wp4
+If you use **easyPARM** in your research, please cite:
+
+> Abdelazim M. A. Abdelgawwad and Antonio Francés-Monerris.  
+> *easyPARM: Automated, Versatile, and Reliable Force Field Parameters for Metal-Containing Molecules with Unique Labeling of Coordinating Atoms.*  
+> *J. Chem. Theory Comput.*, Article ASAP.  
+> [DOI: 10.1021/acs.jctc.4c01272](https://doi.org/10.1021/acs.jctc.4c01272) 
 
 ## Key Features
 1. **Force Field Parameter Generation**: easyPARM uses the Seminario method [1] to derive bond-stretching 
