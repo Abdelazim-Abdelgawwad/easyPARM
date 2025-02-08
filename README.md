@@ -3,7 +3,11 @@
 A new version of **easyPARM (v3.00)** has been released! 🎉  
 This version includes **new features, enhancements, and expanded compatibility.**  
 
-👉 **Check the latest release notes and the manual **  
+🔗 **Explore the latest updates:**  
+📖 [Official Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)  
+📂 Check the manual PDB file for detailed instructions.  
+
+Upgrade now and experience the improvements! 🚀
 
 ## 💡 Contribute & Suggest Improvements  
 
