@@ -73,10 +73,10 @@ all_available_counters = list('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM
 #Each metal index gets its own set of characters (with some reuse across different indices).
 def get_counter_for_metal(metal_index, atom_type):
     # Dividing standard alphanumeric characters among 12 metal indices
-    if metal_index == 0:
+    if metal_index == 1:
         # Digits 0-9 + a,b (12 characters)
         return iter(list('0123456789ab'))
-    elif metal_index == 1:
+    elif metal_index == 2:
         # Uppercase A through L (12 characters)
         return iter(list('ABCDEFGHIJKL'))
     elif metal_index == 3:
