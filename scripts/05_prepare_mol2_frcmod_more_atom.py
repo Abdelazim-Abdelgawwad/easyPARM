@@ -105,10 +105,7 @@ normal_two_letter_elements = {
 
 # Metal elements (that should remain unchanged)
 metal_two_letter_elements = {
-    "Ru", "Pd", "Ag", "Pt", "Rh", "Zr", "Ir", "Cr", "Co", "Re", "Sn", "Gd", "In", "Sc", "Fe", "Zn", "Ni", "Sb",
-    "Ti", "Mn", "Cu", "Ga", "Rb", "Sr", "Au", "Pb", "Hg", "Bi", "Po", "Fr", "Ra", "Ac", "Th", "Ta", "Be", "Cd",
-    "Cf", "Cm", "Db", "Ds", "Er", "Es", "Fm", "Hs", "Lr", "Lu", "Md", "Mo", "No", "Nb", "Np", "Pa", "Pu", "Rf",
-    "Sg", "Sm", "Tc", "Tm", "Cn"
+    "Ru", "Pd", "Ag", "Pt", "Rh", "Zr", "Ir", 'Cr', 'Co', 'Re', 'Ir', 'Sn', 'Gd', 'In', 'Sc', 'Ar', 'Fe', 'Zn', 'Si', 'Ni', "Sb", "Ti", "Mn", "Cu", "Ga", "Ge" , "As", "Rb", "Sr", "Te", "Au", "Pb", "Hg", "Bi", "Po", "Rn", "Fr", "Ra", "Ac", "Th", "Ta"
 }
 
 # Function to update the mol2 file with new atom types

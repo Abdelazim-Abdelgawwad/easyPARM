@@ -60,10 +60,7 @@ normal_two_letter_elements = {
 
 # Metal elements (that should remain unchanged)
 metal_two_letter_elements = {
-    "Ru", "Pd", "Ag", "Pt", "Rh", "Zr", "Ir", "Cr", "Co", "Re", "Sn", "Gd", "In", "Sc", "Fe", "Zn", "Ni", "Sb",
-    "Ti", "Mn", "Cu", "Ga", "Rb", "Sr", "Au", "Pb", "Hg", "Bi", "Po", "Fr", "Ra", "Ac", "Th", "Ta", "Be", "Cd",
-    "Cf", "Cm", "Db", "Ds", "Er", "Es", "Fm", "Hs", "Lr", "Lu", "Md", "Mo", "No", "Nb", "Np", "Pa", "Pu", "Rf",
-    "Sg", "Sm", "Tc", "Tm", "Cn"
+    "Ru", "Pd", "Ag", "Pt", "Rh", "Zr", "Ir", 'Cr', 'Co', 'Re', 'Ir', 'Sn', 'Gd', 'In', 'Sc', 'Ar', 'Fe', 'Zn', 'Si', 'Ni', "Sb", "Ti", "Mn", "Cu", "Ga", "Ge" , "As", "Rb", "Sr", "Te", "Au", "Pb", "Hg", "Bi", "Po", "Rn", "Fr", "Ra", "Ac", "Th", "Ta"
 }
 
 # Keep track of all new_atom_types created
@@ -76,10 +73,10 @@ all_available_counters = list('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM
 #Each metal index gets its own set of characters (with some reuse across different indices).
 def get_counter_for_metal(metal_index, atom_type):
     # Dividing standard alphanumeric characters among 12 metal indices
-    if metal_index == 1:
+    if metal_index == 0:
         # Digits 0-9 + a,b (12 characters)
         return iter(list('0123456789ab'))
-    elif metal_index == 2:
+    elif metal_index == 1:
         # Uppercase A through L (12 characters)
         return iter(list('ABCDEFGHIJKL'))
     elif metal_index == 3:
