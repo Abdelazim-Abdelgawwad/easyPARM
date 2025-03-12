@@ -1,13 +1,15 @@
-# 🚀 easyPARM v3.00 is Here!  
+# 🚀 easyPARM v3.10 Released! 🎉  
 
-A new version of **easyPARM (v3.00)** has been released! 🎉  
-This version includes **new features, enhancements, and expanded compatibility.**  
+The latest version of **easyPARM (v3.10)** is now available! This update brings **new features, enhancements, and improved compatibility**, including:  
 
-🔗 **Explore the latest updates:**  
-📖 [Official Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)  
-📂 Check the website or the manual PDB file for detailed instructions.  
+✅ **Support for metal complexes** with up to **15 metals**  
+✅ **CHARMM-format parameter generation**  
 
-Upgrade now and experience the improvements! 🚀
+🔗 **Learn more:**  
+📖 [Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)  
+📂 Refer to the website or the manual PDB file for detailed instructions.  
+
+Upgrade now and take advantage of the latest improvements! 🚀  
 
 ## 💡 Contribute & Suggest Improvements  
 
