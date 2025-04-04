@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.10 - 12 February 2025                                #
+#                              |  $$$$$$/              Ver. 3.20 - 3 April 2025                                   #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -236,8 +236,10 @@ def update_mol2_file(atom_positions, mol2_file, new_file, metal_positions, bonds
     
     # Write hybridization information to Hybridization_info.dat
     with open('Hybridization_Info.dat', 'w') as file:
+        file.write("addAtomTypes {\n")
         for atom_name, new_atom_type in zip(atom_names, new_atom_types):
-            file.write(f"{new_atom_type}  {atom_name}  sp3\n")
+            file.write(f'  {{ "{new_atom_type}" "{atom_name}" "sp3" }}\n')
+        file.write("}\n")
 
 # Main function to execute the process
 def main():

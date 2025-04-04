@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.10 - 12 February 2025                                #
+#                              |  $$$$$$/              Ver. 3.20 - 3 April 2025                                   #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -20,7 +20,7 @@
 
 import re
 import periodictable
-
+import sys 
 # Read the pair atoms and their bond type (single, double, triple)
 def read_distance_type_data(distance_type_filename):
     distance_type_data = []
@@ -30,34 +30,34 @@ def read_distance_type_data(distance_type_filename):
             distance_type_data.append((int(parts[0]), int(parts[1]), int(parts[2])))
     return distance_type_data
 
-# update the section of connectivity and atomic number in library file
-def parse_and_update_complex_lib(filename, distance_type_filename):
+# Update the section of connectivity and atomic number in the library file
+def parse_and_update_complex_lib(filename, molecule_name, distance_type_filename):
     with open(filename, 'r') as file:
         content = file.read()
 
     distance_type_data = read_distance_type_data(distance_type_filename)
 
+    # Define patterns dynamically based on the molecule name
+    atoms_pattern = rf'(!entry\.{molecule_name}\.unit\.atoms table.*?!entry\.{molecule_name}\.unit\.atomspertinfo)'
+    connectivity_pattern = rf'(!entry\.{molecule_name}\.unit\.connectivity.*?!entry\.{molecule_name}\.unit\.hierarchy)'
+
     # Extract and update atoms section
-    atoms_pattern = r'(!entry\.mol\.unit\.atoms table.*?!entry\.mol\.unit\.atomspertinfo)'
     atoms_match = re.search(atoms_pattern, content, re.DOTALL)
-    
     if atoms_match:
         original_atoms_section = atoms_match.group(1)
         updated_atoms_section = update_atoms_section(original_atoms_section)
         content = content.replace(original_atoms_section, updated_atoms_section)
     else:
-        print("Atoms section not found in the file.")
+        print(f"Atoms section for '{molecule_name}' not found in the file.")
 
     # Extract and update connectivity section
-    connectivity_pattern = r'(!entry\.mol\.unit\.connectivity.*?!entry\.mol\.unit\.hierarchy)'
     connectivity_match = re.search(connectivity_pattern, content, re.DOTALL)
-    
     if connectivity_match:
         original_connectivity_section = connectivity_match.group(1)
         updated_connectivity_section = update_connectivity_section(original_connectivity_section, distance_type_data)
         content = content.replace(original_connectivity_section, updated_connectivity_section)
     else:
-        print("Connectivity section not found in the file.")
+        print(f"Connectivity section for '{molecule_name}' not found in the file.")
 
     # Write the updated content back to the file
     with open(filename, 'w') as file:
@@ -131,7 +131,15 @@ def update_connectivity_section(section, distance_type_data):
     return '\n'.join(updated_lines)
 
 # Input
-lib_filename = 'COMPLEX.lib'
-distance_type_filename = 'distance_type.dat'
-parse_and_update_complex_lib(lib_filename, distance_type_filename)
+if __name__ == "__main__":
+    if len(sys.argv) > 2:
+        lib_filename = sys.argv[1]  # First argument: Library file
+        molecule_name = sys.argv[2]  # Second argument: Molecule name
+    else:
+        lib_filename = 'COMPLEX.lib'
+        molecule_name = 'mol'  # Default molecule name
+
+    distance_type_filename = 'distance_type.dat'
+
+    parse_and_update_complex_lib(lib_filename, molecule_name, distance_type_filename)
 

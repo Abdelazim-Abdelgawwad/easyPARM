@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.10 - 12 February 2025                                #
+#                              |  $$$$$$/              Ver. 3.20 - 3 April 2025                                   #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -18,6 +18,7 @@
 #Distributed under the GNU LESSER GENERAL PUBLIC LICENSE Version 2.1, February 1999                               #
 #Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es         #
 ###################################################################################################################
+
 
 
 from Bio import PDB
@@ -140,7 +141,7 @@ def calculate_acetyl_position_from_environment(target_atom, bonded_atoms):
     c_pos = target_coord + c_n_vector * c_n_bond
     
     # Calculate carbonyl oxygen position
-    # O=C-N angle should be ~121° and in the amide plane
+    # O=C-N angle should be ~121Â° and in the amide plane
     o_c_n_angle = np.radians(121)
     o_direction = rotate_vector(-c_n_vector, plane_normal, o_c_n_angle)
     c_o_bond = 1.229  # C=O bond length
@@ -177,7 +178,7 @@ def calculate_acetyl_group(n_atom, bonded_atoms):
     co_vector = o_pos - c_pos
     co_vector = co_vector / np.linalg.norm(co_vector)
     
-    # Calculate hydrogens with 109.5° tetrahedral angles
+    # Calculate hydrogens with 109.5Â° tetrahedral angles
     # and proper staggered conformation relative to C=O
     perp1 = np.cross(c_ch3_vector, co_vector)
     perp1 = perp1 / np.linalg.norm(perp1)
@@ -230,10 +231,11 @@ def calculate_amino_group(c_atom, bonded_atoms):
     
     return n_pos, h_positions
 
+
 def analyze_and_extract_metal_site(input_pdb, metals=['MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU', 'NA', 'K', 'LI', 'RB', 'CS', 'MG', 'CA', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI', 'LA', 'CE', 'PR', 'ND', 'PM', 'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU', 'FE2', 'FE3', 'FE4', 'CU1', 'CU2', 'MN2', 'MN3', 'MN4', 'CO2', 'CO3', 'NI2', 'NI3', 'V2', 'V3', 'V4', 'V5'], distance_cutoff=2.6):
     parser = PDB.PDBParser(QUIET=True)
     structure = parser.get_structure('protein', input_pdb)
-    
+
     standard_residues = {
         "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
         "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
@@ -244,8 +246,8 @@ def analyze_and_extract_metal_site(input_pdb, metals=['MN', 'FE', 'CO', 'NI', 'C
     residues_to_extract = set()
     coordinated_residues = set()
     all_atoms = []
-    terminal_modifications = []  # New list for terminal modifications
-    
+    terminal_modifications = []
+
     # First pass: Find metal sites and coordinating residues
     for model in structure:
         for chain in model:
@@ -255,7 +257,7 @@ def analyze_and_extract_metal_site(input_pdb, metals=['MN', 'FE', 'CO', 'NI', 'C
                         metal_coord = atom.coord
                         metal_key = f"{atom.element}_{chain.id}_{residue.get_id()[1]}"
                         metal_sites[metal_key] = {'metal': atom, 'coordinating': []}
-                        
+
                         for chain2 in model:
                             for residue2 in chain2:
                                 is_coordinating = False
@@ -265,80 +267,168 @@ def analyze_and_extract_metal_site(input_pdb, metals=['MN', 'FE', 'CO', 'NI', 'C
                                         is_coordinating = True
                                         metal_sites[metal_key]['coordinating'].append(residue2)
                                         residues_to_extract.add((chain2.id, residue2.get_id()))
-                                        
+
                                 if is_coordinating and residue2.get_resname() in standard_residues:
                                     coordinated_residues.add((chain2.id, residue2.get_id()))
+
+        # Find standard residues linked to non-standard coordinating residues
+        heavy_atoms = [atom for chain in model for residue in chain for atom in residue if atom.element != 'H']
+        ns = PDB.NeighborSearch(heavy_atoms)
+        bond_cutoff = 1.9  # Covalent bond distance cutoff in Å
+        for metal_key in metal_sites:
+            for coord_res in metal_sites[metal_key]['coordinating']:
+                if coord_res.resname not in standard_residues:  # Non-standard residue
+                    coord_heavy_atoms = [atom for atom in coord_res if atom.element != 'H']
+                    linked_residues = set()
+                    for atom in coord_heavy_atoms:
+                        nearby_atoms = ns.search(atom.coord, bond_cutoff, level='A')
+                        for nearby_atom in nearby_atoms:
+                            nearby_res = nearby_atom.get_parent()
+                            if (nearby_res != coord_res and
+                                nearby_res.resname in standard_residues):
+                                linked_residues.add(nearby_res)
+                    for linked_res in linked_residues:
+                        res_key = (linked_res.get_parent().id, linked_res.get_id())
+                        if res_key not in residues_to_extract:
+                            residues_to_extract.add(res_key)
+                            coordinated_residues.add(res_key)
+
+    # Improved cross-residue bond detection focused on the extracted residues
+    # Create a subset of atoms only from residues we're extracting
+    extracted_atoms = []
+    extracted_residue_objects = {}
     
-    # Second pass: Extract atoms and calculate modifications
     for model in structure:
         for chain in model:
             for residue in chain:
                 res_key = (chain.id, residue.get_id())
                 if res_key in residues_to_extract:
-                    # Add original atoms
+                    extracted_residue_objects[res_key] = residue
                     for atom in residue:
-                        all_atoms.append({
-                            'element': atom.element if atom.element != " " else atom.name[0],
-                            'coord': atom.coord,
-                            'name': atom.name,
-                            'resname': residue.resname,
-                            'resnum': residue.get_id()[1],
-                            'is_capping': False
-                        })
-                    
-                    # Calculate terminal modifications if needed
-                    if res_key in coordinated_residues:
-                        # N-terminal acetylation
-                        n_atom, n_bonded = get_local_environment(residue, "N")
-                        if n_atom is not None and len(n_bonded) > 0:
-                            c_pos, o_pos, ch3_pos, h_positions = calculate_acetyl_group(n_atom, n_bonded)
-                            if c_pos is not None:
-                                # Store acetyl group atoms with is_capping flag
-                                terminal_modifications.extend([
-                                    {
-                                        'element': 'C', 'coord': c_pos, 'name': 'CAC',
-                                        'resname': residue.resname, 'resnum': residue.get_id()[1],
-                                        'is_capping': True
-                                    },
-                                    {
-                                        'element': 'O', 'coord': o_pos, 'name': 'OAC',
-                                        'resname': residue.resname, 'resnum': residue.get_id()[1],
-                                        'is_capping': True
-                                    },
-                                    {
-                                        'element': 'C', 'coord': ch3_pos, 'name': 'CME',
-                                        'resname': residue.resname, 'resnum': residue.get_id()[1],
-                                        'is_capping': True
-                                    }
-                                ])
-                                for i, h_pos in enumerate(h_positions):
-                                    terminal_modifications.append({
-                                        'element': 'H', 'coord': h_pos, 'name': f'HM{i+1}',
-                                        'resname': residue.resname, 'resnum': residue.get_id()[1],
-                                        'is_capping': True
-                                    })
-                        
-                        # C-terminal amination
-                        c_atom, c_bonded = get_local_environment(residue, "C")
-                        if c_atom is not None and len(c_bonded) > 0:
-                            n_pos, h_positions = calculate_amino_group(c_atom, c_bonded)
-                            if n_pos is not None:
-                                # Store amino group atoms with is_capping flag
-                                terminal_modifications.append({
-                                    'element': 'N', 'coord': n_pos, 'name': 'NT',
-                                    'resname': residue.resname, 'resnum': residue.get_id()[1],
-                                    'is_capping': True
-                                })
-                                for i, h_pos in enumerate(h_positions):
-                                    terminal_modifications.append({
-                                        'element': 'H', 'coord': h_pos, 'name': f'HT{i+1}',
-                                        'resname': residue.resname, 'resnum': residue.get_id()[1],
-                                        'is_capping': True
-                                    })
+                        if atom.element != 'H':  # Only include heavy atoms
+                            extracted_atoms.append(atom)
     
+    # Use NeighborSearch only on atoms within the extracted residues
+    ns_extracted = PDB.NeighborSearch(extracted_atoms)
+    bond_cutoff = 1.9  # Covalent bond distance cutoff
+    
+    # Initialize bond dictionary for extracted residues
+    cross_residue_bonds = {}
+    for res_key in residues_to_extract:
+        cross_residue_bonds[res_key] = {}
+    
+    # Detect all cross-residue bonds within the extracted residues
+    for atom in extracted_atoms:
+        res_key = (atom.get_parent().get_parent().id, atom.get_parent().get_id())
+        atom_name = atom.name
+        
+        # Initialize entry for this atom if not exists
+        if atom_name not in cross_residue_bonds[res_key]:
+            cross_residue_bonds[res_key][atom_name] = []
+        
+        # Look for nearby atoms that could form bonds
+        nearby_atoms = ns_extracted.search(atom.coord, bond_cutoff, level='A')
+        for nearby_atom in nearby_atoms:
+            if nearby_atom == atom:
+                continue  # Skip self
+                
+            nearby_res_key = (nearby_atom.get_parent().get_parent().id, 
+                             nearby_atom.get_parent().get_id())
+            
+            # Only record if it's a different residue
+            if nearby_res_key != res_key:
+                cross_residue_bonds[res_key][atom_name].append(nearby_atom)
+
+    # Second pass: Extract atoms and calculate modifications
+    for res_key, residue in extracted_residue_objects.items():
+        # Add original atoms
+        for atom in residue:
+            all_atoms.append({
+                'element': atom.element if atom.element != " " else atom.name[0],
+                'coord': atom.coord,
+                'name': atom.name,
+                'resname': residue.resname,
+                'resnum': residue.get_id()[1],
+                'is_capping': False
+            })
+
+        # Calculate terminal modifications if needed
+        if res_key in coordinated_residues:
+            # Check if N atom needs acetylation
+            n_atom, n_bonded = get_local_environment(residue, "N", max_bond_distance=1.6)
+            if n_atom is not None:
+                needs_acetyl = True
+                
+                # Check if N already has cross-residue bonds within the extracted residues
+                if "N" in cross_residue_bonds[res_key] and cross_residue_bonds[res_key]["N"]:
+                    # N has bonds to another residue within our selection
+                    needs_acetyl = False
+                
+                # Alternatively, check if N already has 3+ total bonds (already capped or part of chain)
+                if len(n_bonded) >= 3:
+                    needs_acetyl = False
+                    
+                if needs_acetyl:
+                    c_pos, o_pos, ch3_pos, h_positions = calculate_acetyl_group(n_atom, n_bonded)
+                    if c_pos is not None:
+                        terminal_modifications.extend([
+                            {
+                                'element': 'C', 'coord': c_pos, 'name': 'CAC',
+                                'resname': residue.resname, 'resnum': residue.get_id()[1],
+                                'is_capping': True
+                            },
+                            {
+                                'element': 'O', 'coord': o_pos, 'name': 'OAC',
+                                'resname': residue.resname, 'resnum': residue.get_id()[1],
+                                'is_capping': True
+                            },
+                            {
+                                'element': 'C', 'coord': ch3_pos, 'name': 'CME',
+                                'resname': residue.resname, 'resnum': residue.get_id()[1],
+                                'is_capping': True
+                            }
+                        ])
+                        for i, h_pos in enumerate(h_positions):
+                            terminal_modifications.append({
+                                'element': 'H', 'coord': h_pos, 'name': f'HM{i+1}',
+                                'resname': residue.resname, 'resnum': residue.get_id()[1],
+                                'is_capping': True
+                            })
+
+            # Check if C atom needs amination
+            c_atom, c_bonded = get_local_environment(residue, "C", max_bond_distance=1.6)
+            if c_atom is not None:
+                needs_amination = True
+                
+                # Check if C already has cross-residue bonds within the extracted residues
+                if "C" in cross_residue_bonds[res_key] and cross_residue_bonds[res_key]["C"]:
+                    # C has bonds to another residue within our selection
+                    needs_amination = False
+                
+                # For C atom in standard residues, it should have 3 bonds if capped (CA, O, NH2)
+                # or 3 bonds if part of a peptide chain (CA, O, next residue's N)
+                # If it only has 2 bonds (likely CA and O), it needs capping
+                if len(c_bonded) >= 3:
+                    needs_amination = False
+                    
+                if needs_amination:
+                    n_pos, h_positions = calculate_amino_group(c_atom, c_bonded)
+                    if n_pos is not None:
+                        terminal_modifications.append({
+                            'element': 'N', 'coord': n_pos, 'name': 'NT',
+                            'resname': residue.resname, 'resnum': residue.get_id()[1],
+                            'is_capping': True
+                        })
+                        for i, h_pos in enumerate(h_positions):
+                            terminal_modifications.append({
+                                'element': 'H', 'coord': h_pos, 'name': f'HT{i+1}',
+                                'resname': residue.resname, 'resnum': residue.get_id()[1],
+                                'is_capping': True
+                            })
+
     # Combine original atoms and modifications
     all_atoms.extend(terminal_modifications)
-    
+
     # Write XYZ file with conditional formatting
     with open('initial_structure.xyz', 'w') as f:
         f.write(f"{len(all_atoms)}\n\n")
@@ -347,24 +437,18 @@ def analyze_and_extract_metal_site(input_pdb, metals=['MN', 'FE', 'CO', 'NI', 'C
                 f.write(f"{atom['element']:2} {atom['coord'][0]:10.6f} {atom['coord'][1]:10.6f} {atom['coord'][2]:10.6f} {atom['name']:4} {atom['resname']:3} {atom['resnum']:4}  CAPPING\n")
             else:
                 f.write(f"{atom['element']:2} {atom['coord'][0]:10.6f} {atom['coord'][1]:10.6f} {atom['coord'][2]:10.6f} {atom['name']:4} {atom['resname']:3} {atom['resnum']:4}\n")
-    
+
     return metal_sites
 
 def main():
     parser = argparse.ArgumentParser(description='Analyze metal coordination sites and add terminal modifications')
     parser.add_argument('pdb_file', help='Input PDB file to analyze')
-    parser.add_argument('--metals', nargs='+', default=['ZN', 'FE', 'CO'], 
-                      help='List of metals to analyze (default: ZN FE CO)')
-    parser.add_argument('--distance', type=float, default=2.5,
-                      help='Distance cutoff for coordination in Angstroms (default: 2.5)')
 
     args = parser.parse_args()
 
     try:
         metal_sites = analyze_and_extract_metal_site(
-            args.pdb_file,
-            metals=args.metals,
-            distance_cutoff=args.distance
+            args.pdb_file
         )
         
     except FileNotFoundError:
@@ -376,3 +460,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

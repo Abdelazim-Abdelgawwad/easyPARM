@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.10 - 12 February 2025                                #
+#                              |  $$$$$$/              Ver. 3.20 - 3 April 2025                                   #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -36,7 +36,7 @@ cd "$RUN_DIR"
 files_to_remove=("dihedral.dat" "distance.dat" "esout" "atom_type.dat" "COMPLEX_modified.mol2" "COMPLEX_modified.frcmod" \
     "forcefield2.dat" "forcefield.dat" "metal_number.dat" "new_atomtype.dat" "temp_COMPLEX_modified.frcmod" \
     "temp.dat" "updated_COMPLEX_modified.frcmod" "updated_COMPLEX_modified2.frcmod" "angle.dat" "bond_angle_dihedral_data.dat" "new_atomtype1.dat"\
-    "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat" "COMPLEX.lib") 
+    "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat") 
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
@@ -120,7 +120,7 @@ get_user_input() {
     while true; do
 	echo " "
         read -p "Please provide the total multiplicity: " multi_total
-        if [[ "$multi_total" =~ ^-?[0-9]+$ ]]; then
+        if [[ "$multi_total" =~ ^-?[1-9]+$ ]]; then
             break
         else
 	    echo " "
@@ -742,27 +742,34 @@ echo " "
 metalloprotein_choice=$(get_valid_input "Does your structure belong to MetalloProtein ? (y/n): " "y n yes no Y N YES NO Yes No")
 if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     echo " "
-    read -p "Please provide the metalloprotein pdb file: " protein_pdb
+    while true; do
+    	read -p "Please provide the metalloprotein pdb file: " protein_pdb
+    	if [ ! -f "$RUN_DIR/$protein_pdb" ]; then
+	    echo "Metalloprotein file not found in $RUN_DIR. Please check the file name and try again."
+            continue
+    	fi
 
-    pdb4amber -i "$RUN_DIR/$protein_pdb" -o "$RUN_DIR/metalloprotein_easyPARM.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
+    	pdb4amber -i "$RUN_DIR/$protein_pdb" -o "$RUN_DIR/metalloprotein_easyPARM.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
     
-    cp "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/NEW_COMPLEX.mol2" 
-    if [ -f "$SCRIPT_DIR/metalloprotein.py" ]; then
-        python3 "$SCRIPT_DIR/metalloprotein.py" 
-    	mv "$RUN_DIR/COMPLEX_updated.mol2" "$RUN_DIR/easyCOMPLEX.mol2"
-    else
-        echo "Script metalloprotein.py not found in $SCRIPT_DIR. Exiting."
-        exit 1
-    fi
+    	cp "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/NEW_COMPLEX.mol2" 
+    	if [ -f "$SCRIPT_DIR/metalloprotein.py" ]; then
+        	python3 "$SCRIPT_DIR/metalloprotein.py" 
+    		mv "$RUN_DIR/COMPLEX_updated.mol2" "$RUN_DIR/easyCOMPLEX.mol2"
+    	else
+        	echo "Script metalloprotein.py not found in $SCRIPT_DIR. Exiting."
+        	exit 1
+    	fi
 
-    # Check if the script was successful
-    if [ $? -ne 0 ]; then
-        echo "Failed to execute metalloprotein.py. Exiting."
-        exit 1
-    fi
-    mv "$RUN_DIR/easyCOMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
-    python3 "$SCRIPT_DIR/distribute_metalloprotein_charge.py" "$RUN_DIR/$protein_pdb" "$RUN_DIR/COMPLEX_modified.mol2" $charge_total 
-    mv "$RUN_DIR/updated_easy_COMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
+    	# Check if the script was successful
+    	if [ $? -ne 0 ]; then
+        	echo "Failed to execute metalloprotein.py. Exiting."
+        	exit 1
+    	fi
+    	mv "$RUN_DIR/easyCOMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
+    	python3 "$SCRIPT_DIR/distribute_metalloprotein_charge.py" "$RUN_DIR/$protein_pdb" "$RUN_DIR/COMPLEX_modified.mol2" $charge_total 
+    	mv "$RUN_DIR/updated_easy_COMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
+    	break
+    done
 else
     :
 fi
@@ -879,6 +886,8 @@ resid_ID=$(get_valid_input "Would you like to change the residue ID (Default= mo
 
 if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     mv "$RUN_DIR/nonstand.pdb" "$RUN_DIR/easyPARM_MetalloProtein.pdb"
+    pdb4amber -i "$RUN_DIR/easyPARM_MetalloProtein.pdb" -o "$RUN_DIR/easyPARM_MetalloProtein2.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
+    mv "$RUN_DIR/easyPARM_MetalloProtein2.pdb" "$RUN_DIR/easyPARM_MetalloProtein.pdb" 
     mv "$RUN_DIR/QM.mol2" "$RUN_DIR/METAL.mol2"
     mv "$RUN_DIR/coordinated_residues.txt" "$RUN_DIR/Bond_Info.dat"
     awk '
@@ -918,14 +927,29 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     	echo "Mol2 $line_number			  : $mol2out"
     	((line_number++))
     done < "$input_file" 
-    echo "Mol2  		    	  : METAL.mol2"
-    echo "Frcmod                    : COMPLEX.frcmod"
-    echo "MetalloProtein pdb        : easyPARM_MetalloProtein.pdb"
-    echo "Bond Information	  : Bond_Info.dat"
-    echo "New Atom Type	  	  : Hybridization_Info.dat"
     if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
-	    #sed -i -E "s/ mol /${resid_name}/g" "$RUN_DIR/COMPLEX.mol2"
-	    sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/METAL.mol2"
+	    cp "$RUN_DIR/COMPLEX.frcmod" "$RUN_DIR/COMPLEX_${resid_name}.frcmod"
+	    #mv "$RUN_DIR/COMPLEX.frcmod" "$RUN_DIR/easyPARM.frcmod"
+	    mv "$RUN_DIR/Bond_Info.dat" "$RUN_DIR/Bond_Info_${resid_name}.dat" 
+	    mv "$RUN_DIR/Hybridization_Info.dat" "$RUN_DIR/Hybridization_Info_${resid_name}.dat"
+	    mv "$RUN_DIR/easyPARM_MetalloProtein.pdb" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
+	    cp "$RUN_DIR/METAL.mol2" "$RUN_DIR/${resid_name}.mol2"
+	    sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/${resid_name}.mol2"
+	    sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
+
+	    echo "Mol2  		    	  : ${resid_name}.mol2"
+	    echo "Frcmod                    : COMPLEX_${resid_name}.frcmod"
+	    echo "Bond Information          : Bond_Info_${resid_name}.dat"
+	    echo "Lib    		    : COMPLEX.lib"
+	    echo "New Atom Type             : Hybridization_Info_${resid_name}.dat"
+	    echo "MetalloProtein pdb        : easyPARM_MetalloProtein_${resid_name}.pdb"
+    else
+	    echo "Mol2                            : METAL.mol2"
+	    echo "Bond Information        : Bond_Info.dat"
+	    echo "Frcmod                    : COMPLEX.frcmod"
+	    echo "New Atom Type           : Hybridization_Info.dat"
+	    echo "Lib    		: COMPLEX.lib"
+	    echo "MetalloProtein pdb        : easyPARM_MetalloProtein.pdb"
     fi
 else 
     	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
@@ -946,23 +970,48 @@ else
 
 fi	
 
-# Prepare library input for tleap
-echo "source leaprc.gaff" > input_library.tleap
-echo "loadamberparams COMPLEX.frcmod" >> input_library.tleap
-echo "mol = loadmol2 "COMPLEX.mol2"" >> input_library.tleap
-echo "check mol" >> input_library.tleap
-echo "charge mol" >> input_library.tleap
-echo "savepdb mol COMPLEX.pdb" >> input_library.tleap
-echo "saveoff mol COMPLEX.lib" >> input_library.tleap
-echo "quit" >> input_library.tleap
+if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+        # run for only the small residue 
+	python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/part_QM.xyz"
 
-tleap -f input_library.tleap > leap.log
+	# Prepare library input for tleap
+	echo "source leaprc.gaff" > input_library.tleap
+	echo "loadamberparams COMPLEX.frcmod" >> input_library.tleap
+	echo "mol = loadmol2 METAL.mol2" >> input_library.tleap
+	echo "check mol" >> input_library.tleap
+	echo "charge mol" >> input_library.tleap
+	echo "savepdb mol COMPLEX.pdb" >> input_library.tleap
+	echo "saveoff mol COMPLEX.lib" >> input_library.tleap
+	echo "quit" >> input_library.tleap
+	tleap -f input_library.tleap > leap.log
 
-#Function to correct lib file
+	#Function to correct lib file
+	python3 "$SCRIPT_DIR/12_generate_lib.py" 
+	
+	tleap -f ALL_RESIDUE_tleap.input > leap.log
 
-python3 "$SCRIPT_DIR/12_generate_lib.py"
-if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
-	sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
+	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
+		sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
+		rm "$RUN_DIR/COMPLEX.frcmod"
+		rm "$RUN_DIR/METAL.mol2"
+	fi
+else 
+	echo "source leaprc.gaff" > input_library.tleap
+	echo "loadamberparams COMPLEX.frcmod" >> input_library.tleap
+	echo "mol = loadmol2 "COMPLEX.mol2"" >> input_library.tleap
+	echo "check mol" >> input_library.tleap
+	echo "charge mol" >> input_library.tleap
+	echo "savepdb mol COMPLEX.pdb" >> input_library.tleap
+	echo "saveoff mol COMPLEX.lib" >> input_library.tleap
+	echo "quit" >> input_library.tleap
+
+	#Function to correct lib file
+
+	python3 "$SCRIPT_DIR/12_generate_lib.py"
+	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
+		sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
+	fi
+
 fi
 
 echo " "
@@ -984,7 +1033,6 @@ fi
 
 
 if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
-	rm COMPLEX.lib
 	rm COMPLEX.mol2
         rm COMPLEX.pdb	
 	rm metalloprotein_easyPARM_*
@@ -1005,7 +1053,7 @@ files_to_remove=("dihedral.dat" "distance.dat" "esout" "atom_type.dat" "COMPLEX_
     "complex.fchk" "forcefield2.dat" "metal_number.dat" "temp_COMPLEX_modified.frcmod" "new_atomtype.dat" \
     "temp.dat" "updated_COMPLEX_modified.frcmod" "updated_COMPLEX_modified2.frcmod" "angle.dat" "new_atomtype1.dat"\
     "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "mol.pdb" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat" "REFQM.pdb" "NEW_COMPLEX.mol2"\
-    "QM.pdb" "nonstand.pdb" "part_QM.xyz" "part_QM.pdb" "charge_qm.dat" "metalloprotein.pdb" "metalloprotein_easyPARM.pdb" "charges_all.dat" "easynonstands.pdb" "easyPARM.pdb" "easyPARM_residues.dat" ) 
+    "QM.pdb" "nonstand.pdb" "part_QM.xyz" "part_QM.pdb" "charge_qm.dat" "metalloprotein.pdb" "metalloprotein_easyPARM.pdb" "charges_all.dat" "easynonstands.pdb" "easyPARM.pdb" "easyPARM_residues.dat" "reference_structure.xyz" "ALL_RESIDUE_tleap.input" ) 
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then

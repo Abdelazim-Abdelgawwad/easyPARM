@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.10 - 12 February 2025                                #
+#                              |  $$$$$$/              Ver. 3.20 - 3 April 2025                                   #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -177,7 +177,7 @@ def process_pdb(input_file='input.pdb'):
     metals = {
             'al': 13, 'ar': 18, 'cr': 24, 'sc': 21, 'ti': 22, 'v': 23, 'mn': 25, 'b':5,
         'fe': 26, 'co': 27, 'ni': 28, 'cu': 29, 'zn': 30, 'ga': 31, 'se': 34,
-        'kr': 36, 'rb': 37, 'sr': 38, 'y': 39, 'zr': 40, 'nb': 41, 'mo': 42,
+        'kr': 36, 'rb': 37, 'sr': 38, 'y': 39, 'zr': 40, 'mo': 42,
         'tc': 43, 'ru': 44, 'rh': 45, 'pd': 46, 'ag': 47, 'cd': 48, 'in': 49,
         'sn': 50, 'xe': 54, 'cs': 55, 'ba': 56, 'la': 57, 'ce': 58, 'pr': 59,
         'nd': 60, 'pm': 61, 'sm': 62, 'eu': 63, 'gd': 64, 'tb': 65, 'dy': 66,
@@ -239,9 +239,9 @@ def process_pdb(input_file='input.pdb'):
             
             new_atom = f"S{metal_count[old_atom]}"
             line_mappings.append(f"{line_num} {old_atom} {new_atom}")
-            
+            new_element = " S " 
             new_atom_padded = f"{new_atom:<4}"
-            new_line = line[:12] + new_atom_padded + line[16:]
+            new_line = line[:12] + new_atom_padded + line[16:-4] + new_element + "\n"
             new_lines[line_num - 1] = new_line
 
     with open('mol.pdb', 'w') as f:
