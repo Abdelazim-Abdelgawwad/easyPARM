@@ -940,7 +940,7 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 	    echo "Mol2  		    	  : ${resid_name}.mol2"
 	    echo "Frcmod                    : COMPLEX_${resid_name}.frcmod"
 	    echo "Bond Information          : Bond_Info_${resid_name}.dat"
-	    echo "Lib    		    : COMPLEX.lib"
+	    echo "Lib    		    	: COMPLEX.lib"
 	    echo "New Atom Type             : Hybridization_Info_${resid_name}.dat"
 	    echo "MetalloProtein pdb        : easyPARM_MetalloProtein_${resid_name}.pdb"
     else
