@@ -1,15 +1,18 @@
-# 🚀 easyPARM v3.10 Released! 🎉  
+# 🚀 easyPARM v3.20 Released! 🎉  
 
-The latest version of **easyPARM (v3.10)** is now available! This update brings **new features, enhancements, and improved compatibility**, including:  
+The latest version of **easyPARM (v3.20)** is here! This update introduces **new features, enhancements, and improved compatibility**, including:  
 
-✅ **Support for metal complexes** with up to **15 metals**  
-✅ **CHARMM-format parameter generation**  
+✅ **Support for multi-metal complexes** with an **unlimited number of metal atoms**  
+✅ **Metalloprotein library generation** to facilitate the use of `tleap`  
+
+A tutorial for multi-metal metalloproteins is available to guide you through the process.  
 
 🔗 **Learn more:**  
 📖 [Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)  
-📂 Refer to the website or the manual PDB file for detailed instructions.  
+📂 Check the website or refer to the manual PDB file for detailed instructions.  
 
 Upgrade now and take advantage of the latest improvements! 🚀  
+-----
 
 ## 💡 Contribute & Suggest Improvements  
 
