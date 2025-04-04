@@ -39,7 +39,7 @@ echo -e "${CYAN}
 ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝${NC}"
 echo -e "${GREEN}                ⚡ Automated Force Fields for Metals ⚡${NC}"
 echo -e "${PURPLE}════════════════════════════════════════════════════════════════════════${NC}"
-echo -e "                     ${YELLOW}Version 3.10 — February 2025${NC}"
+echo -e "                     ${YELLOW}Version 3.20 — April 2025${NC}"
 echo -e "${PURPLE}════════════════════════════════════════════════════════════════════════${NC}"
 
 
