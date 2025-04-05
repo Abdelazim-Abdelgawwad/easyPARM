@@ -984,12 +984,11 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 	echo "saveoff mol COMPLEX.lib" >> input_library.tleap
 	echo "quit" >> input_library.tleap
 	tleap -f input_library.tleap > leap.log
-
-	#Function to correct lib file
-	python3 "$SCRIPT_DIR/12_generate_lib.py" 
-	
 	tleap -f ALL_RESIDUE_tleap.input > leap.log
 
+	#Function to correct lib file
+	python3 "$SCRIPT_DIR/12_generate_lib.py" > "$RUN_DIR/temp.dat" 2>&1 
+	
 	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
 		sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
 		rm "$RUN_DIR/COMPLEX.frcmod"
@@ -1007,7 +1006,7 @@ else
 
 	#Function to correct lib file
 
-	python3 "$SCRIPT_DIR/12_generate_lib.py"
+	python3 "$SCRIPT_DIR/12_generate_lib.py" "$RUN_DIR/temp.dat" 2>&1
 	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
 		sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
 	fi
@@ -1373,7 +1372,7 @@ fi
     tleap -f input_library.tleap > leap.log
 
     #Function to correct lib file
-    python3 "$SCRIPT_DIR/12_generate_lib.py"
+    python3 "$SCRIPT_DIR/12_generate_lib.py" "$RUN_DIR/temp.dat" 2>&1
     
     #Generate the correct fixed and not fixed charges
     if [[ "${charmm_FF,,}" =~ ^(y|yes)$ ]] && [[ "${metalloprotein_choice,,}" =~ ^(n|no)$ ]] ; then
