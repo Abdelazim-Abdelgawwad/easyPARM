@@ -1005,8 +1005,9 @@ else
 	echo "quit" >> input_library.tleap
 
 	#Function to correct lib file
+	tleap -f input_library.tleap > leap.log
 
-	python3 "$SCRIPT_DIR/12_generate_lib.py" "$RUN_DIR/temp.dat" 2>&1
+	python3 "$SCRIPT_DIR/12_generate_lib.py" > "$RUN_DIR/temp.dat" 2>&1
 	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
 		sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
 	fi
@@ -1372,7 +1373,7 @@ fi
     tleap -f input_library.tleap > leap.log
 
     #Function to correct lib file
-    python3 "$SCRIPT_DIR/12_generate_lib.py" "$RUN_DIR/temp.dat" 2>&1
+    python3 "$SCRIPT_DIR/12_generate_lib.py" > "$RUN_DIR/temp.dat" 2>&1
     
     #Generate the correct fixed and not fixed charges
     if [[ "${charmm_FF,,}" =~ ^(y|yes)$ ]] && [[ "${metalloprotein_choice,,}" =~ ^(n|no)$ ]] ; then
