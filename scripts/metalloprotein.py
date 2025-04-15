@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.20 - 3 April 2025                                  #
+#                              |  $$$$$$/              Ver. 3.25 - 14 April 2025                                 #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -550,7 +550,6 @@ def extract_non_standard_residues_from_ref(ref_pdb, output_pdb="part_QM.pdb", ou
                     # Reset for new residue
                     current_res = res_key
                     current_res_atoms = []
-                
                 current_res_atoms.append(line)
         
         # Process last residue in file

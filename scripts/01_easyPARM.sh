@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.20 - 3 April 2025                                   #
+#                              |  $$$$$$/              Ver. 3.25 - 14 April 2025                                  #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -36,7 +36,7 @@ cd "$RUN_DIR"
 files_to_remove=("dihedral.dat" "distance.dat" "esout" "atom_type.dat" "COMPLEX_modified.mol2" "COMPLEX_modified.frcmod" \
     "forcefield2.dat" "forcefield.dat" "metal_number.dat" "new_atomtype.dat" "temp_COMPLEX_modified.frcmod" \
     "temp.dat" "updated_COMPLEX_modified.frcmod" "updated_COMPLEX_modified2.frcmod" "angle.dat" "bond_angle_dihedral_data.dat" "new_atomtype1.dat"\
-    "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat") 
+    "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat" "COMPLEX.mol2" ) 
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
@@ -940,7 +940,7 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 	    echo "Mol2  		    	  : ${resid_name}.mol2"
 	    echo "Frcmod                    : COMPLEX_${resid_name}.frcmod"
 	    echo "Bond Information          : Bond_Info_${resid_name}.dat"
-	    echo "Lib    		    	: COMPLEX.lib"
+	    echo "Lib    		    	  : COMPLEX.lib"
 	    echo "New Atom Type             : Hybridization_Info_${resid_name}.dat"
 	    echo "MetalloProtein pdb        : easyPARM_MetalloProtein_${resid_name}.pdb"
     else
