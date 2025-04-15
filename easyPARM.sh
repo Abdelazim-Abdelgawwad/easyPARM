@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.20 - 3 April 2025                                   #
+#                              |  $$$$$$/              Ver. 3.25 - 14 April 2025                                  #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -39,7 +39,7 @@ echo -e "${CYAN}
 ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝${NC}"
 echo -e "${GREEN}                ⚡ Automated Force Fields for Metals ⚡${NC}"
 echo -e "${PURPLE}════════════════════════════════════════════════════════════════════════${NC}"
-echo -e "                     ${YELLOW}Version 3.20 — April 2025${NC}"
+echo -e "                     ${YELLOW}Version 3.25 — April 2025${NC}"
 echo -e "${PURPLE}════════════════════════════════════════════════════════════════════════${NC}"
 
 
@@ -68,24 +68,50 @@ ORIGINAL_DIR="$(pwd)"
 # Determine the directory of this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Navigate to the scripts directory (if needed)
+# Navigate to the scripts directory
 cd "$SCRIPT_DIR/scripts"
 
-# Run the 01_easyPARM.sh script, passing the original working directory as an argument
-echo " "
-echo "================================="
-echo "  	easyPARM Menu          "
-echo "================================="
-echo "Select your option:"
-echo "1- Generate molecular complex parameters"
-echo "2- Generate metalloprotein .xyz structure"
-echo "3- Convert AMBER parameters to OpenMM or GROMACS format"
+# Check if an input file was provided with .inp or .input extension
+if [ $# -eq 1 ] && [[ "$1" == *.inp || "$1" == *.input || "$1" == *.config ]]; then
+    # Non-interactive mode
+    input_file="$1"
 
-choice=$(get_valid_input "Enter your choice: " "1 2 3")
-if [ "$choice" = "1" ]; then
-	./01_easyPARM.sh "$ORIGINAL_DIR"
-elif [ "$choice" = "2" ]; then
-	./extract_metal_coordination.sh "$ORIGINAL_DIR"
-elif [ "$choice" = "3" ]; then
-	./amber_converter.sh "$ORIGINAL_DIR"
-fi   
+    # Use Python script to convert the input file to the format expected by 01_easyPARM.sh
+    temp_input="tempx.input"
+    rm -f "$ORIGINAL_DIR/$temp_input"
+    echo " "
+    python3 "$SCRIPT_DIR/scripts/input_generator.py" "$ORIGINAL_DIR/$input_file" "$ORIGINAL_DIR/$temp_input"
+
+    # Run 01_easyPARM.sh with the converted input
+    if [ -f "$ORIGINAL_DIR/$temp_input" ]; then
+	    echo -e "\n\033[1;32m=== NON-INTERACTIVE MODE ACTIVATED ===\033[0m"
+	    echo -e "\033[1;90mRunning easyPARM with configuration from $input_file\033[0m\n"
+	    ./01_easyPARM.sh "$ORIGINAL_DIR" < "$ORIGINAL_DIR/$temp_input"
+	    rm -f "$ORIGINAL_DIR/$temp_input"
+    else
+	    # Interactive mode 
+	    echo -e "\n\033[1;34m=== INTERACTIVE MODE ACTIVATED ===\033[0m"
+	    echo -e "\033[1;90mRunning easyPARM with user prompts\033[0m\n"
+	    ./01_easyPARM.sh "$ORIGINAL_DIR"
+    fi 
+else
+    # Interactive mod
+    echo -e "\n\033[1;34m=== INTERACTIVE MODE ACTIVATED ===\033[0m"
+    echo -e "\033[1;90mRunning easyPARM with user prompts\033[0m\n"
+    echo " "
+    echo "================================="
+    echo "          easyPARM Menu          "
+    echo "================================="
+    echo "Select your option:"
+    echo "1- Generate molecular complex parameters"
+    echo "2- Generate metalloprotein .xyz structure"
+    echo "3- Convert AMBER parameters to OpenMM or GROMACS format"
+    choice=$(get_valid_input "Enter your choice: " "1 2 3")
+    if [ "$choice" = "1" ]; then
+        ./01_easyPARM.sh "$ORIGINAL_DIR"
+    elif [ "$choice" = "2" ]; then
+        ./extract_metal_coordination.sh "$ORIGINAL_DIR"
+    elif [ "$choice" = "3" ]; then
+        ./amber_converter.sh "$ORIGINAL_DIR"
+    fi
+fi
