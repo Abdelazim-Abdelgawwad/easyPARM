@@ -8,6 +8,7 @@ We're excited to announce **easyPARM v3.25** with a powerful new addition!
 
 ## Previously in v3.20:
 ✅ **Support for multi-metal complexes** with an **unlimited number of metal atoms**
+
 ✅ **Metalloprotein library generation** to facilitate the use of `tleap`
 
 ## Documentation:
