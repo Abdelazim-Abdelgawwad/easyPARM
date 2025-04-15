@@ -12,6 +12,7 @@ We're excited to announce **easyPARM v3.25** with a powerful new addition!
 
 ## Documentation:
 📖 [Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)
+
 📂 Check the website for detailed guides on all features
 
 Upgrade now and take advantage of the latest improvements! 🚀
