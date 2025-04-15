@@ -1,17 +1,21 @@
-# 🚀 easyPARM v3.20 Released! 🎉  
+# 🚀 easyPARM v3.25 Released! 🎉
 
-The latest version of **easyPARM (v3.20)** is here! This update introduces **new features, enhancements, and improved compatibility**, including:  
+We're excited to announce **easyPARM v3.25** with a powerful new addition!
 
-✅ **Support for multi-metal complexes** with an **unlimited number of metal atoms**  
-✅ **Metalloprotein library generation** to facilitate the use of `tleap`  
+## NEW in v3.25:
+✅ **Non-Interactive Mode** - Process multiple structures automatically using configuration files without manual input
+   *Special thanks to Floris Löffler for suggesting this valuable feature!*
 
-A tutorial for multi-metal metalloproteins is available to guide you through the process.  
+## Previously in v3.20:
+✅ **Support for multi-metal complexes** with an **unlimited number of metal atoms**
 
-🔗 **Learn more:**  
-📖 [Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)  
-📂 Check the website or refer to the manual PDB file for detailed instructions.  
+✅ **Metalloprotein library generation** to facilitate the use of `tleap`
 
-Upgrade now and take advantage of the latest improvements! 🚀  
+## Documentation:
+📖 [Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)
+📂 Check the website for detailed guides on all features
+
+Upgrade now and take advantage of the latest improvements! 🚀
 -----
 
 ## 💡 Contribute & Suggest Improvements  
