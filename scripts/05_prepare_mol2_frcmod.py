@@ -52,10 +52,10 @@ def extract_atoms(metal_positions, bonds):
 
 # List of two-letter elements from the periodic table, using uppercase for consistency
 normal_two_letter_elements = {
-    "Cl", "Br", "Se", "Ne", "He", "Li", "Mg", "Al",
-    "Xe", "Cs", "Ba", "La", "Pr", "Pm", "Sm", "Eu",
-    "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf",
-    "Pa", "Pu", "Am", "Cf", "Es", "Fm", "Md", "No"
+    "Xe" #"Cl", "Br", "Se", "Ne", "He", "Li", "Mg", "Al",
+    #"Xe", "Cs", "Ba", "La", "Pr", "Pm", "Sm", "Eu",
+    #"Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf",
+    #"Pa", "Pu", "Am", "Cf", "Es", "Fm", "Md", "No"
 }
 
 # Metal elements (that should remain unchanged)
