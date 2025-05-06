@@ -1,23 +1,33 @@
-# 🚀 easyPARM v3.25 Released! 🎉
+# 🚀 easyPARM v3.30 Released! 🎉
 
-We're excited to announce **easyPARM v3.25** with a powerful new addition!
+We’re thrilled to introduce **easyPARM v3.30**, bringing important improvements and a major enhancement to atom type assignment!
 
-## NEW in v3.25:
-✅ **Non-Interactive Mode** - Process multiple structures automatically using configuration files without manual input
-   *Special thanks to Floris Löffler for suggesting this valuable feature!*
+## NEW in v3.30:
+
+🛠️ **Bug Fixes** – General stability and reliability improvements across the tool.
+
+🔍 **Enhanced GAFF Atom Type Assignment**
+easyPARM now includes an advanced algorithm for atom type assignment that accurately identifies GAFF atom types, even in cases where **Antechamber fails**—especially for **complex, multi-metal structures**.
+Using deep analysis of **molecular topology**, **ring systems**, **hybridization states**, and **aromaticity**, easyPARM ensures **precise atom typing** to significantly improve the quality of generated force field parameters.
+
+## Previously in v3.25:
+
+✅ **Non-Interactive Mode** – Automate processing of multiple structures with configuration files
+*Thanks to Floris Löffler for this great suggestion!*
 
 ## Previously in v3.20:
-✅ **Support for multi-metal metalloprotein** with an **unlimited number of metal atoms**
 
-✅ **Metalloprotein library generation** to facilitate the use of `tleap`
+✅ **Multi-metal Metalloprotein Support** – Handle an **unlimited number of metal atoms**
+✅ **Metalloprotein Library Generation** – Seamless integration with `tleap`
 
 ## Documentation:
+
 📖 [Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)
+📂 Visit the website for detailed guides and usage examples
 
-📂 Check the website for detailed guides on all features
+Upgrade now and benefit from even smarter parameter generation! 🚀
 
-Upgrade now and take advantage of the latest improvements! 🚀
------
+---
 
 ## 💡 Contribute & Suggest Improvements  
 
