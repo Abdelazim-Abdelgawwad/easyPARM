@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.25 - 14 April 2025                                  #
+#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -42,7 +42,7 @@ covalent_radii = {
 typical_bond_lengths = {
     ('C', 'C'): (1.20, 1.33, 1.54),  # triple, double, single
     ('C', 'N'): (1.16, 1.27, 1.47),
-    ('C', 'O'): (1.13, 1.22, 1.43),
+    ('C', 'O'): (1.13, 1.21, 1.43),
     ('N', 'N'): (1.10, 1.25, 1.45),
     ('N', 'O'): (1.06, 1.21, 1.36),
     ('O', 'O'): (1.21, 1.48),  # double, single (no common triple bond)
@@ -58,7 +58,7 @@ typical_bond_lengths = {
     ('C', 'Cl'): (1.77,),  # single
     ('C', 'Br'): (1.94,),  # single
     ('C', 'I'): (2.14,),  # single
-    ('C', 'S'): (1.82,),  # single
+    ('C', 'S'): (1.60, 1.82,),  # single
     ('C', 'P'): (1.84,),  # single
     ('N', 'F'): (1.36,),  # single
     ('N', 'Cl'): (1.75,),  # single
@@ -99,8 +99,8 @@ typical_bond_lengths = {
     ('C', 'P'): (1.69, 1.84),  # double, single
 }
 
+#Check if the element is a metal.
 def is_metal(element):
-    """Check if the element is a metal."""
     metals = {
         'Li', 'Na', 'K', 'Rb', 'Cs', 'Fr', 'Be', 'Mg', 'Ca', 'Sr', 'Ba', 'Ra',
         'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn',
@@ -329,8 +329,8 @@ def get_bond_type(element1, element2, distance, coords, atom_types, bonds):
     lengths = typical_bond_lengths[key]
     
     tolerance_single = 1.15
-    tolerance_double = 1.08
-    tolerance_triple = 1.05
+    tolerance_double = 1.07
+    tolerance_triple = 1.01
 
     if len(lengths) == 1:
         return 1
@@ -411,36 +411,6 @@ def is_part_of_conjugated_system(atom1, atom2, coords, atom_types, bonds):
 
     conjugated_path = find_conjugated_path(atom1, atom2, [atom1, atom2], {atom1, atom2})
     return bool(conjugated_path)
-
-#Get an initial guess for bond type based on element types and distance.
-def get_initial_bond_type(element1, element2, distance):
-    key = tuple(sorted((element1, element2)))
-
-    if key not in typical_bond_lengths:
-        return 1
-
-    lengths = typical_bond_lengths[key]
-
-    tolerance_single = 1.15
-    tolerance_double = 1.08
-    tolerance_triple = 1.05
-
-    if len(lengths) == 1:
-        return 1
-    elif len(lengths) == 2:
-        if distance <= lengths[0] * tolerance_double:
-            return 2
-        else:
-            return 1
-    elif len(lengths) == 3:
-        if distance <= lengths[0] * tolerance_triple:
-            return 3
-        elif distance <= lengths[1] * tolerance_double:
-            return 2
-        else:
-            return 1
-
-    return 1
 
 #Detects the bond type (single, double, or triple) based on atom types, distance, and molecular context.
 def detect_bond_type(atom1, atom2, distance, atom_types, coords, bonds):

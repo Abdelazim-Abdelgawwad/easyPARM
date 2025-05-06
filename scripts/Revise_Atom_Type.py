@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.25 - 14 April 2025                                  #
+#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -175,7 +175,7 @@ def replace_atom_types_and_bonds_from_mol2(complex_file='COMPLEX.mol2', referenc
 def process_pdb(input_file='input.pdb'):
     # Dictionary of metals and their atomic numbers
     metals = {
-            'al': 13, 'ar': 18, 'cr': 24, 'sc': 21, 'ti': 22, 'v': 23, 'mn': 25, 'b':5,
+        'al': 13, 'ar': 18, 'cr': 24, 'sc': 21, 'ti': 22, 'v': 23, 'mn': 25, 'b':5,
         'fe': 26, 'co': 27, 'ni': 28, 'cu': 29, 'zn': 30, 'ga': 31, 'se': 34,
         'kr': 36, 'rb': 37, 'sr': 38, 'y': 39, 'zr': 40, 'mo': 42,
         'tc': 43, 'ru': 44, 'rh': 45, 'pd': 46, 'ag': 47, 'cd': 48, 'in': 49,

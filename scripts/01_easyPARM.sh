@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.25 - 14 April 2025                                  #
+#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -36,7 +36,7 @@ cd "$RUN_DIR"
 files_to_remove=("dihedral.dat" "distance.dat" "esout" "atom_type.dat" "COMPLEX_modified.mol2" "COMPLEX_modified.frcmod" \
     "forcefield2.dat" "forcefield.dat" "metal_number.dat" "new_atomtype.dat" "temp_COMPLEX_modified.frcmod" \
     "temp.dat" "updated_COMPLEX_modified.frcmod" "updated_COMPLEX_modified2.frcmod" "angle.dat" "bond_angle_dihedral_data.dat" "new_atomtype1.dat"\
-    "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat" "COMPLEX.mol2" ) 
+    "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat" "COMPLEX.mol2" "ZEMA.mol2" "easyPARM_atomtype.dat" ) 
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
@@ -265,9 +265,19 @@ run_antechamber_gaussian() {
 
         # First antechamber attempt
         antechamber -i "$RUN_DIR/$charge_data" -fi "$input_form" -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -c "$method" -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -j 5 -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1 
-	sed -i 's/ c2 / cc /g' $RUN_DIR/COMPLEX.mol2
-	sed -i 's/ n2 / nd /g' $RUN_DIR/COMPLEX.mol2
-        # Convert XYZ to PDB
+        
+
+	if [[ "$atom_type" -eq 2 || "$atom_type" -eq 3 ]]; then
+		
+		python3 "$SCRIPT_DIR/03_correct_mol2.py" "$RUN_DIR"
+
+		python3 "$SCRIPT_DIR/atomtype_helper.py" "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/distance_type.dat" "$RUN_DIR/COMREF.mol2" > "$RUN_DIR/temp.dat" 2>&1
+		python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/COMREF.mol2" > "$RUN_DIR/temp.dat" 2>&1 
+		if [ -f "$RUN_DIR/easyPARM.mol2" ]; then
+			cp "$RUN_DIR/easyPARM.mol2" "$RUN_DIR/COMPLEX.mol2"
+		fi
+	fi
+	# Convert XYZ to PDB
         python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/$xyz_file" "$RUN_DIR/COMPLEX.pdb"
         
         # Revise Atom Type
@@ -282,7 +292,7 @@ run_antechamber_gaussian() {
                 antechamber -i "$RUN_DIR/mol.pdb" -fi pdb -o "$RUN_DIR/ONE.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
                 python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
                 if [ -f "$RUN_DIR/ONE.mol2" ]; then
-                    mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
+                    cp "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
                 fi
             fi
         else 
@@ -292,11 +302,11 @@ run_antechamber_gaussian() {
         # Check if COMPLEX.mol2 was generated after all attempts
         if [ ! -f "$RUN_DIR/COMPLEX.mol2" ]; then
             echo "  "
-	    echo "Failed to generate COMPLEX.mol2 after multiple attempts."
+	    echo "Failed to generate COMPLEX.mol2 after multiple attempts. Please verify the availability of Antechamber."
             retry=$(get_valid_input "Would you like to provide a different charge output file? (y/n)" "y n")
             case "$retry" in
                 [yY]) 
-                    echo "Retrying with a different charge output file..."
+                    echo "Retrying with a different charge output file."
                     continue
                     ;;
                 [nN]) 
@@ -356,8 +366,19 @@ run_antechamber_orca() {
     
     # First antechamber attempt
     antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no -j 5 > "$RUN_DIR/temp.dat" 2>&1
-    sed -i 's/ c2 / cc /g' $RUN_DIR/COMPLEX.mol2
-    sed -i 's/ n2 / nd /g' $RUN_DIR/COMPLEX.mol2
+    # Apply our approach to detect the atom type.
+    if [[ "$atom_type" -eq 2 || "$atom_type" -eq 3 ]]; then
+	    
+	    # Revise the mol2
+	    python3 "$SCRIPT_DIR/03_correct_mol2.py" "$RUN_DIR"
+	    # Update the bond section in mol2
+	    python3 "$SCRIPT_DIR/atomtype_helper.py" "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/distance_type.dat" "$RUN_DIR/COMREF.mol2" > "$RUN_DIR/temp.dat" 2>&1
+	    # Detect the atom type
+	    python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/COMREF.mol2" > "$RUN_DIR/temp.dat" 2>&1 
+	    if [ -f "$RUN_DIR/easyPARM.mol2" ]; then
+		    cp "$RUN_DIR/easyPARM.mol2" "$RUN_DIR/COMPLEX.mol2"
+	    fi
+    fi
     
     # Revise Atom Type
     python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
@@ -381,7 +402,7 @@ run_antechamber_orca() {
     # Check if COMPLEX.mol2 was generated after all attempts
     if [ ! -f "$RUN_DIR/COMPLEX.mol2" ]; then
         echo " "
-	echo "Failed to generate COMPLEX.mol2 after multiple attempts."
+	echo "Failed to generate COMPLEX.mol2 after multiple attempts. Please verify the availability of Antechamber."
         retry=$(get_valid_input "Would you like to provide a different charge output file? (y/n)" "y n")
         case "$retry" in
             [yY]) 
@@ -453,8 +474,19 @@ run_antechamber_gamess() {
  
     # First antechamber attempt
     antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -at "$at_type" -m "$multi_total" -dr no -j 5 > "$RUN_DIR/temp.dat" 2>&1
-    sed -i 's/ c2 / cc /g' $RUN_DIR/COMPLEX.mol2
-    sed -i 's/ n2 / nd /g' $RUN_DIR/COMPLEX.mol2
+    
+    # Apply our approach to detect the atom type.
+    if [[ "$atom_type" -eq 2 || "$atom_type" -eq 3 ]]; then
+
+	    # Revise the mol2
+	    python3 "$SCRIPT_DIR/03_correct_mol2.py" "$RUN_DIR"
+	    # 
+	    python3 "$SCRIPT_DIR/atomtype_helper.py" "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/distance_type.dat" "$RUN_DIR/ZEMA.mol2" > "$RUN_DIR/temp.dat" 2>&1
+	    python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/ZEMA.mol2" > "$RUN_DIR/temp.dat" 2>&1 
+	    if [ -f "$RUN_DIR/easyPARM.mol2" ]; then
+		    mv "$RUN_DIR/easyPARM.mol2" "$RUN_DIR/COMPLEX.mol2"
+	    fi
+    fi
       
     # Revise Atom Type
     python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
@@ -478,7 +510,7 @@ run_antechamber_gamess() {
     # Check if COMPLEX.mol2 was generated after all attempts
     if [ ! -f "$RUN_DIR/COMPLEX.mol2" ]; then
         echo " "
-	echo "Failed to generate COMPLEX.mol2 after multiple attempts."
+	echo "Failed to generate COMPLEX.mol2 after multiple attempts. Please verify the availability of Antechamber."
         retry=$(get_valid_input "Would you like to provide a different charge output file? (y/n)" "y n")
         case "$retry" in
             [yY]) 
@@ -688,14 +720,14 @@ if [ "$charge_output" -eq 3 ]; then
         # Generate the required input for resp calculation  
 	python3 "$SCRIPT_DIR/RESP_ORCA.py" "$RUN_DIR/$orca_hessian" $charge_total "$RUN_DIR/similar.dat" > "$RUN_DIR/temp.dat"
 	# Run resp 
-    	resp -O -i "$RUN_DIR/resp.in" -o "$RUN_DIR/resp.out" -e "$RUN_DIR/esp.in" -t "$RUN_DIR/esp.chg"
+    	resp -O -i resp.in -o resp.out -e esp.in -t esp.chg
 	# reshape charges
         awk '{for (i=1; i<=NF; i++) print $i}' "$RUN_DIR/esp.chg" > "$RUN_DIR/charges.chg"
 	# update mol2 charges
         python3 "$SCRIPT_DIR/Retrieve_RESP_Charges.py"
 elif [ "$charge_output" -eq 4 ]; then
         python3 "$SCRIPT_DIR/RESP_GAMESS.py" "$RUN_DIR/$charge_data" $charge_total "$RUN_DIR/similar.dat" > "$RUN_DIR/temp.dat"
-    	resp -O -i "$RUN_DIR/resp.in" -o "$RUN_DIR/resp.out" -e "$RUN_DIR/esp.in" -t "$RUN_DIR/esp.chg"
+    	resp -O -i resp.in -o resp.out -e esp.in -t esp.chg
 	# reshape charges
         awk '{for (i=1; i<=NF; i++) print $i}' "$RUN_DIR/esp.chg" > "$RUN_DIR/charges.chg"
 	# update mol2 charges
@@ -771,7 +803,10 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     	break
     done
 else
-    :
+	if [ -f "$RUN_DIR/COMPLEX.lib" ]; then
+		rm "$RUN_DIR/COMPLEX.lib"
+    	fi
+    
 fi
 
 # Select appropriate preparation script in order to generate the frcmod depend on the complexation of the system
@@ -1053,7 +1088,7 @@ files_to_remove=("dihedral.dat" "distance.dat" "esout" "atom_type.dat" "COMPLEX_
     "complex.fchk" "forcefield2.dat" "metal_number.dat" "temp_COMPLEX_modified.frcmod" "new_atomtype.dat" \
     "temp.dat" "updated_COMPLEX_modified.frcmod" "updated_COMPLEX_modified2.frcmod" "angle.dat" "new_atomtype1.dat"\
     "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "mol.pdb" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat" "REFQM.pdb" "NEW_COMPLEX.mol2"\
-    "QM.pdb" "nonstand.pdb" "part_QM.xyz" "part_QM.pdb" "charge_qm.dat" "metalloprotein.pdb" "metalloprotein_easyPARM.pdb" "charges_all.dat" "easynonstands.pdb" "easyPARM.pdb" "easyPARM_residues.dat" "reference_structure.xyz" "ALL_RESIDUE_tleap.input" ) 
+    "QM.pdb" "nonstand.pdb" "part_QM.xyz" "part_QM.pdb" "charge_qm.dat" "metalloprotein.pdb" "metalloprotein_easyPARM.pdb" "charges_all.dat" "easynonstands.pdb" "easyPARM.pdb" "easyPARM_residues.dat" "reference_structure.xyz" "ALL_RESIDUE_tleap.input" "ZEMA.mol2" "easyPARM_atomtype.dat") 
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
@@ -1138,7 +1173,7 @@ if [[ "${restrain_choice,,}" =~ ^(y|yes)$ ]]; then
     	rm "$file_name"
     fi 
     # Extract the file extension
-extension="${ESP_FILE##*.}"
+    extension="${ESP_FILE##*.}"
 
     # Check the extension and set qm_output
     if [ "$extension" = "log" ]; then

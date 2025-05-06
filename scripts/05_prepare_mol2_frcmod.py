@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.25 - 14 April 2025                                  #
+#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -52,7 +52,7 @@ def extract_atoms(metal_positions, bonds):
 
 # List of two-letter elements from the periodic table, using uppercase for consistency
 normal_two_letter_elements = {
-    "Xe" #"Cl", "Br", "Se", "Ne", "He", "Li", "Mg", "Al",
+    "Xe"#"Cl", "Br", "Se", "Ne", "He", "Li", "Mg", "Al",
     #"Xe", "Cs", "Ba", "La", "Pr", "Pm", "Sm", "Eu",
     #"Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf",
     #"Pa", "Pu", "Am", "Cf", "Es", "Fm", "Md", "No"
