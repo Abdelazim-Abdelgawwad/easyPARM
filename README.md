@@ -18,6 +18,7 @@ Using deep analysis of **molecular topology**, **ring systems**, **hybridization
 ## Previously in v3.20:
 
 ✅ **Multi-metal Metalloprotein Support** – Handle an **unlimited number of metal atoms**
+
 ✅ **Metalloprotein Library Generation** – Seamless integration with `tleap`
 
 ## Documentation:
