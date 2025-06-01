@@ -864,7 +864,7 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     fi
    
     python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/part_QM.xyz" "$RUN_DIR/part_QM.pdb"
-    antechamber -i "$RUN_DIR/part_QM.pdb" -fi pdb -o "$RUN_DIR/QM.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no -j 5 > "$RUN_DIR/temp.dat" 2>&1
+    antechamber -i "$RUN_DIR/part_QM.pdb" -fi pdb -o "$RUN_DIR/QM.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
     sed -i '$d' "$RUN_DIR/nonstand.pdb"
     cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/nonstand.pdb"
     cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/easynonstands.pdb"
