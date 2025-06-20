@@ -1,52 +1,62 @@
-# 🚀 easyPARM v3.30 Released! 🎉
+# 🚀 easyPARM v4.00 Released! 🎉
 
-We’re thrilled to introduce **easyPARM v3.30**, bringing important improvements and a major enhancement to atom type assignment!
+We’re excited to announce **easyPARM v4.00**, a major update packed with **critical enhancements** and **new force field features** for even more robust and intelligent parameter generation!
 
-## NEW in v3.30:
+## 🔥 NEW in v4.00:
 
-🛠️ **Bug Fixes** – General stability and reliability improvements across the tool.
+🧠 **Improved Atom Type Detection**
+Our upgraded atom type assignment engine now features enhanced recognition of chemical environments, especially in **challenging coordination complexes**.
+This ensures more **accurate atom typing** using **molecular topology**, **ring strain**, **hybridization**, and **aromaticity analysis**, with better **metal-ligand recognition**.
 
-🔍 **Enhanced GAFF Atom Type Assignment**
-easyPARM now includes an advanced algorithm for atom type assignment that accurately identifies GAFF atom types, even in cases where **Antechamber fails**—especially for **complex, multi-metal structures**.
-Using deep analysis of **molecular topology**, **ring systems**, **hybridization states**, and **aromaticity**, easyPARM ensures **precise atom typing** to significantly improve the quality of generated force field parameters.
+🧬 **ff19SB for Metal-Coordinated Standard Residues**
+Standard amino acid residues **coordinated to metal centers** are now typed using **ff19SB**, improving structural realism and parameter consistency in **metal-binding proteins**.
 
-## Previously in v3.25:
-
-✅ **Non-Interactive Mode** – Automate processing of multiple structures with configuration files
-*Thanks to Floris Löffler for this great suggestion!*
-
-## Previously in v3.20:
-
-✅ **Multi-metal Metalloprotein Support** – Handle an **unlimited number of metal atoms**
-
-✅ **Metalloprotein Library Generation** – Seamless integration with `tleap`
-
-## Documentation:
-
-📖 [Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)
-📂 Visit the website for detailed guides and usage examples
-
-Upgrade now and benefit from even smarter parameter generation! 🚀
+🚨 **Bug Fixes**
+Numerous bugs have been fixed for better stability. 
 
 ---
 
-## 💡 Contribute & Suggest Improvements  
+## 🔄 Previously in v3.30:
 
-Do you have ideas for improving **easyPARM**? 🛠️  
-We welcome contributions, feature suggestions, and bug reports!  
+🔍 **Enhanced GAFF Atom Type Assignment**
+Advanced fallback logic for **GAFF atom typing** when **Antechamber fails**, particularly for **multi-metal and organometallic compounds**.
 
-- If you have a **feature request** or **improvement suggestion**, feel free to open an [Issue](https://github.com/Abdelazim-Abdelgawwad/easyPARM/issues).  
-- Want to contribute? submit a **Pull Request**.  
-- Join the discussion and share your feedback in the **Discussions** tab!  
+## ✅ Also in v3.25 & v3.20:
 
-Your contributions help make **easyPARM** better for everyone! 🚀  
+* **Non-Interactive Mode** for batch processing
+* **Unlimited Multi-metal Support**
+* **Metalloprotein Library Integration**
 
-## How to cite 
+---
+
+## 📚 Documentation
+
+📖 [Tutorial & Documentation](https://abdelazim-abdelgawwad.github.io/Tutorial/)
+📂 Explore usage examples, configuration tips, and more on the website!
+
+---
+
+## 💡 Contribute & Suggest Improvements
+
+Have ideas to make **easyPARM** even better?
+We welcome all **issues**, **pull requests**, and **community discussions**:
+
+* [Open an Issue](https://github.com/Abdelazim-Abdelgawwad/easyPARM/issues)
+* [Submit a Pull Request](https://github.com/Abdelazim-Abdelgawwad/easyPARM/pulls)
+* Join the conversation in the **Discussions** tab
+
+Let’s shape the future of molecular parameterization together! 🧪⚡
+
+---
+
+## 📖 How to Cite
 
 If you use **easyPARM** in your research, please cite:
 
-> Abdelazim M. A. Abdelgawwad and Antonio Francés-Monerris.  
-> *easyPARM: Automated, Versatile, and Reliable Force Field Parameters for Metal-Containing Molecules with Unique Labeling of Coordinating Atoms.*  
-> *J. Chem. Theory Comput.*, Article ASAP.  
-> [DOI: 10.1021/acs.jctc.4c01272](https://doi.org/10.1021/acs.jctc.4c01272) 
+> Abdelazim M. A. Abdelgawwad and Antonio Francés-Monerris.
+> *easyPARM: Automated, Versatile, and Reliable Force Field Parameters for Metal-Containing Molecules with Unique Labeling of Coordinating Atoms.*
+> *J. Chem. Theory Comput.*, Article ASAP.
+> [DOI: 10.1021/acs.jctc.4c01272](https://doi.org/10.1021/acs.jctc.4c01272)
+
+---
 
