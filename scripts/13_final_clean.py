@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
+#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -83,7 +83,7 @@ def read_dihe_data(file_path):
                     dihe_data.add(dihe_reversed)
     return dihe_data
 
-#Clean MASS section by consolidating entries.
+#Clean MASS section .
 def clean_mass_section(lines):
     mass_entries = {}
     cleaned_lines = []

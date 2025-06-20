@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
+#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -25,8 +25,8 @@ import re
 import sys
 import periodictable
 
+#Extract atomic coordinates, atomic numbers, and the number of atoms.
 def extract_coordinates_from_file(file_path):
-    """Extract atomic coordinates, atomic numbers, and the number of atoms."""
     with open(file_path, 'r') as f:
         lines = f.readlines()
 
@@ -70,23 +70,12 @@ def extract_coordinates_from_file(file_path):
 
     return atomic_numbers, np.array(coordinates), num_atoms, atom_names
 
+#Extract the Hessian matrix from the GAMESS output file and construct the full symmetric matrix.
+#Handles all valid values in row-major order, even when the data includes trailing zeros.
 def extract_hessian_from_file(file_path, num_atoms):
-    """
-    Extract the Hessian matrix from the GAMESS output file and construct the full symmetric matrix.
-    Handles all valid values in row-major order, even when the data includes trailing zeros.
 
-    Args:
-        file_path (str): Path to the GAMESS output file containing the Hessian data.
-        num_atoms (int): Number of atoms in the system.
-
-    Returns:
-        np.ndarray: The full symmetric Hessian matrix as a 3N x 3N numpy array.
-    """
-    import numpy as np
-    import re
-
+    #Extract floating-point numbers from a line.
     def split_numbers(line):
-        """Extract floating-point numbers from a line."""
         return [float(num) for num in re.findall(r'[+-]?\d+\.\d+E[+-]?\d+', line)]
 
     # Read the file
@@ -138,8 +127,8 @@ def extract_hessian_from_file(file_path, num_atoms):
 
     return hessian_matrix 
 
+#Extract charges from the section between POPULATION ANALYSIS and MOMENTS AT POINT.
 def extract_mulliken_charges(file_path):
-    """Extract charges from the section between POPULATION ANALYSIS and MOMENTS AT POINT."""
     with open(file_path, 'r') as f:
         lines = f.readlines()
 
@@ -185,8 +174,8 @@ def calculate_bond_force_constant(hessian, coordinates, idx1, idx2):
     sub_hessian = extract_sub_hessian(hessian, idx1, idx2)
 
     # Calculate the vector from atom1 to atom2
-    vec12 = coordinates[idx2] - coordinates[idx1]
-    vec12 = vec12 
+    vec12 = coordinates[idx2] - coordinates[idx1] 
+
     # Normalize the vector to get the unit vector along the bond
     unit_vec12 = vec12 / np.linalg.norm(vec12)
 
@@ -202,7 +191,7 @@ def calculate_bond_force_constant(hessian, coordinates, idx1, idx2):
     force_constant_in_kcal = 627.509474 * force_constant  # 627.509474 is the conversion factor
 
     # Apply the harmonic approximation (factor of 2)
-    force_constant_harmonic = 2 * force_constant_in_kcal
+    force_constant_harmonic = 2 * force_constant_in_kcal 
 
     return force_constant_harmonic
 
@@ -269,6 +258,7 @@ def calculate_angle_force_constant(hessian, coordinates, idx1, idx2, idx3):
     
     vec_AB = vec_AB / bohr_to_angstrom
     vec_CB = vec_CB / bohr_to_angstrom
+    
     u_AB = vec_AB / np.linalg.norm(vec_AB)
     u_CB = vec_CB / np.linalg.norm(vec_CB)
 
@@ -295,7 +285,7 @@ def calculate_angle_force_constant(hessian, coordinates, idx1, idx2, idx3):
 
     k_theta = abs(k_theta)
     # Convert from Hartree/Bohr²/radian² to kcal/mol/radian²
-    k_theta_kcal_rad = 2 * k_theta * hartree_to_kcal_mol * (bohr_to_angstrom)**2 
+    k_theta_kcal_rad = 2 * k_theta * hartree_to_kcal_mol * (bohr_to_angstrom**2)
 
     return k_theta_kcal_rad
 

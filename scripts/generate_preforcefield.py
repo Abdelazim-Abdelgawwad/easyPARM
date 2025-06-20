@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
+#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -17,7 +17,6 @@
 #Distributed under the GNU LESSER GENERAL PUBLIC LICENSE Version 2.1, February 1999                               #
 #Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es         #
 ###################################################################################################################
-
 
 import os
 import re
@@ -74,8 +73,71 @@ def is_metal_or_large_atomic_number(atom_name):
     # Return True if atomic number is 5 or greater
     return atomic_number >= 5 if atomic_number > 0 else False
 
-# Replace metal atoms in the mol2 file with placeholder atoms
-def replace_metals(mol2_file, output_file, replacements):
+#Extract all existing atom types from the mol2 file.
+def get_existing_atom_types(mol2_file):
+    existing_types = set()
+    
+    try:
+        with open(mol2_file, 'r') as file:
+            lines = file.readlines()
+        
+        atom_section = False
+        for line in lines:
+            if line.startswith('@<TRIPOS>ATOM'):
+                atom_section = True
+                continue
+            elif line.startswith('@<TRIPOS>BOND'):
+                atom_section = False
+                break
+            
+            if atom_section and line.strip():
+                parts = line.split()
+                if len(parts) > 5:
+                    atom_type = parts[5].strip()
+                    existing_types.add(atom_type)
+    
+    except FileNotFoundError:
+        print(f"Warning: {mol2_file} not found. Proceeding with empty existing types set.")
+    
+    return existing_types
+
+
+# Comprehensive list of potential replacement atom types
+def get_available_replacements(existing_atom_types):
+    all_replacements = [
+        's6', 'p3', 'ss', 'p5', 's4', 'p2', 'sh', 'S1', 'N3', 
+        'ce', 'cq', 'c6', 'cz', 'cx', 'no', 'n1', 'n2', 'n4', 'na', 'nb', 
+        'nc', 'nd', 'ne', 'nf', 'nh', 'ni', 'nj', 'nk', 'nl', 'nm', 'nn', 
+        'np', 'nq', 'nr', 'ns', 'nt', 'nu', 'nv', 'nw', 'nx', 'ny', 'nz',
+        'c1', 'c2', 'c3', 'c4', 'c5', 'c7', 'c8', 'c9', 'ca', 'cb', 'cc', 
+        'cd', 'cf', 'cg', 'ch', 'ci', 'cj', 'ck', 'cl', 'cm', 'cn', 'co', 
+        'cp', 'cr', 'cs', 'ct', 'cu', 'cv', 'cw', 'cy', 'cA', 'cB', 'cC',
+        'o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8', 'o9', 'oa', 'ob', 
+        'oc', 'od', 'oe', 'of', 'og', 'oh', 'oi', 'oj', 'ok', 'ol', 'om', 
+        'on', 'oo', 'op', 'oq', 'or', 'os', 'ot', 'ou', 'ov', 'ow', 'ox',
+        's1', 's3', 's5', 's7', 's8', 's9', 'sa', 'sb', 'sc', 'sd', 'se', 
+        'sf', 'sg', 'si', 'sj', 'sk', 'sl', 'sm', 'sn', 'so', 'sp', 'sq', 
+        'sr', 'st', 'su', 'sv', 'sw', 'sx', 'sy', 'sz'
+    ]
+    
+    # Filter out atom types that already exist in the mol2 file
+    available_replacements = [atom_type for atom_type in all_replacements 
+                             if atom_type not in existing_atom_types]
+    if not available_replacements:
+        raise ValueError("No available replacement atom types found! All potential replacements already exist in the mol2 file.")
+    
+    return available_replacements
+
+
+#Replace metal atoms in the mol2 file with placeholder atoms that don't conflict with existing types.
+def replace_metals(mol2_file, output_file, existing_atom_types=None):
+    # Get existing atom types if not provided
+    if existing_atom_types is None:
+        existing_atom_types = get_existing_atom_types(mol2_file)
+    
+    # Get available replacement atom types
+    available_replacements = get_available_replacements(existing_atom_types)
+    
     replacement_map = {}  # To keep track of what was replaced by what
     replaced_atoms = []  # To store the atom numbers of replaced atoms
 
@@ -84,6 +146,7 @@ def replace_metals(mol2_file, output_file, replacements):
 
     atom_section = False
     metal_count = 0
+    
     with open(output_file, 'w') as outfile:
         for line in lines:
             # Identify the atom section
@@ -94,19 +157,27 @@ def replace_metals(mol2_file, output_file, replacements):
             elif line.startswith('@<TRIPOS>BOND'):
                 atom_section = False
 
-            if atom_section:
+            if atom_section and line.strip():
                 parts = line.split()
                 if len(parts) > 5:
                     atom_name = parts[1]  # Now checking the atom name
                     if is_metal_or_large_atomic_number(atom_name):
-                        # Replace the metal atom with a placeholder
-                        replacement = replacements[metal_count % len(replacements)]
-                        replacement_map[replacement] = parts[5]  # Store the replacement based on atom type
+                        # Check if we have enough available replacements
+                        if metal_count >= len(available_replacements):
+                            raise ValueError(f"Not enough available replacement atom types! "
+                                           f"Found {metal_count + 1} metals but only {len(available_replacements)} available replacements.")
+                        
+                        # Replace the metal atom with an available placeholder
+                        replacement = available_replacements[metal_count]
+                        original_atom_type = parts[5]
+                        replacement_map[replacement] = original_atom_type  # Store the replacement mapping
                         replaced_atoms.append(parts[0])  # Save the atom number
                         parts[5] = replacement
                         metal_count += 1
+                        
                         # Format the line with the new replacement
                         line = f"{parts[0]:>7} {parts[1]:<8} {parts[2]:>10} {parts[3]:>10} {parts[4]:>10} {parts[5]:<8} {parts[6]:>3} {parts[7]:<6} {parts[8]:>10}\n"
+            
             outfile.write(line)
 
     # Save the replaced atom numbers to a file
@@ -114,7 +185,7 @@ def replace_metals(mol2_file, output_file, replacements):
         for atom_number in replaced_atoms:
             metal_file.write(f"{atom_number}\n")
 
-    # Check if more than 8 atoms were replaced
+    # Check if more than 28 atoms were replaced
     if len(replaced_atoms) > 28:
         with open('more_metal.dat', 'w') as more_metal_file:
             for atom_number in replaced_atoms:
@@ -191,7 +262,7 @@ def main():
     frcmod_file = 'COMPLEX_modified.frcmod'
     
     # Define the list of replacement atoms
-    replacements = ['s6','p3', 'ss', 'p5','sh', 'p3', 's4', 'p2', 's2', 'SH', 'P', 'S1' ,'N3', 'ce', 'cq', 'c6', 'cz', 'cx','no'   ]
+    replacements = get_existing_atom_types(input_file) 
 
     # Replace metals in the mol2 file and store the replacements
     replacement_map = replace_metals(input_file, output_file, replacements)
@@ -207,3 +278,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

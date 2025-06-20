@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
+#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -27,6 +27,15 @@ from collections import deque
 import sys
 
 class MolecularAnalyzer:
+    # Define metal elements as a class attribute
+    METAL_ELEMENTS = {'LI', 'BE', 'NA', 'MG', 'AL', 'K', 'CA', 'SC', 'TI', 'V', 'CR', 'MN', 'FE',
+                      'CO', 'NI', 'CU', 'ZN', 'GA', 'RB', 'SR', 'Y', 'ZR', 'NB', 'MO', 'TC', 'RU',
+                      'RH', 'PD', 'AG', 'CD', 'IN', 'SN', 'CS', 'BA', 'LA', 'CE', 'PR', 'ND', 'PM',
+                      'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU', 'HF', 'TA', 'W',
+                      'RE', 'OS', 'IR', 'PT', 'AU', 'HG', 'TL', 'PB', 'BI', 'PO', 'FR', 'RA', 'AC',
+                      'TH', 'PA', 'U', 'NP', 'PU', 'AM', 'CM', 'BK', 'CF', 'ES', 'FM', 'MD', 'NO',
+                      'LR', 'RF', 'DB', 'SG', 'BH', 'HS', 'MT', 'DS', 'RG', 'CN', 'NH', 'FL', 'MC',
+                      'LV', 'TS', 'OG'}
     def __init__(self):
         self.atoms = []  # List of atoms with their properties
         self.bonds = []  # List of bonds
@@ -386,10 +395,7 @@ class MolecularAnalyzer:
         
         # Step 2: Create a list of metals and special handling elements
         # These need special treatment in aromatic systems detection
-        metals = ['LI', 'NA', 'K', 'RB', 'CS', 'FR', 'BE', 'MG', 'CA', 'SR', 'BA', 'RA',
-                  'SC', 'TI', 'V', 'CR', 'MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'Y', 'ZR', 'NB', 
-                  'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'CD', 'HF', 'TA', 'W', 'RE', 'OS', 
-                  'IR', 'PT', 'AU', 'HG', 'LU', 'LR', 'LA', 'AC']
+        metals = self.METAL_ELEMENTS
         # Group of atoms that can form aromatic ring
         group_15_16_atoms = ['N', 'P', 'AS', 'SB', 'O', 'S', 'SE', 'TE']
         
@@ -1110,14 +1116,7 @@ class MolecularAnalyzer:
                 atom['bridge_atom'] = False
          
         # Third Filter: exclude bridge atoms connected to metal atoms
-        metal_elements = {'LI', 'BE', 'NA', 'MG', 'AL', 'K', 'CA', 'SC', 'TI', 'V', 'CR', 'MN', 'FE', 
-                          'CO', 'NI', 'CU', 'ZN', 'GA', 'RB', 'SR', 'Y', 'ZR', 'NB', 'MO', 'TC', 'RU', 
-                          'RH', 'PD', 'AG', 'CD', 'IN', 'SN', 'CS', 'BA', 'LA', 'CE', 'PR', 'ND', 'PM', 
-                          'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU', 'HF', 'TA', 'W', 
-                          'RE', 'OS', 'IR', 'PT', 'AU', 'HG', 'TL', 'PB', 'BI', 'PO', 'FR', 'RA', 'AC', 
-                          'TH', 'PA', 'U', 'NP', 'PU', 'AM', 'CM', 'BK', 'CF', 'ES', 'FM', 'MD', 'NO', 
-                          'LR', 'RF', 'DB', 'SG', 'BH', 'HS', 'MT', 'DS', 'RG', 'CN', 'NH', 'FL', 'MC', 
-                          'LV', 'TS', 'OG'}
+        metal_elements = self.METAL_ELEMENTS 
         
         excluded_by_metal = []
         for atom_idx, atom in enumerate(self.atoms, 1):
@@ -1570,7 +1569,7 @@ class MolecularAnalyzer:
                     elif attached_element == 'S':
                         gaff_type = 'hs'
                     else:
-                            gaff_type = 'h'  # Generic hydrogen 
+                            gaff_type = 'ha'  # Generic hydrogen 
             # Handle carbon atoms
             elif element == 'C':
                 if hybridization == 'sp3':
@@ -1578,17 +1577,35 @@ class MolecularAnalyzer:
                     if is_in_rings:
                         ring_sizes = [len(self.rings[ring_idx]) for ring_idx in is_in_rings]
                         min_ring_size = min(ring_sizes)
+                        # Check if any atom in the ring is a metal
+                        has_metal_in_ring = False
+                        for ring_idx in is_in_rings:
+                            ring = self.rings[ring_idx]
+                            for ring_atom_id in ring:
+                                ring_atom = self.atoms[ring_atom_id-1]
+                                ring_element = ring_atom['element'].upper()
+                                # Define metal elements 
+                                metal_elements = self.METAL_ELEMENTS 
+                                if ring_element in metal_elements:
+                                    has_metal_in_ring = True
+                                    break
+                            if has_metal_in_ring:
+                                break
                         
-                        if min_ring_size == 3:
-                            gaff_type = 'cx'  # sp3 C in three-membered ring
-                        elif min_ring_size == 4:
-                            gaff_type = 'cy'  # sp3 C in four-membered ring
-                        elif min_ring_size == 5:
-                            gaff_type = 'c5'  # sp3 C in five-membered ring
-                        elif min_ring_size == 6:
-                            gaff_type = 'c6'  # sp3 C in six-membered ring
+                        if has_metal_in_ring:
+                            gaff_type = 'c3'
                         else:
-                            gaff_type = 'c3'  # Generic sp3 C in larger rings
+                          
+                            if min_ring_size == 3:
+                                gaff_type = 'cx'  # sp3 C in three-membered ring
+                            elif min_ring_size == 4:
+                                gaff_type = 'cy'  # sp3 C in four-membered ring
+                            elif min_ring_size == 5:
+                                gaff_type = 'c5'  # sp3 C in five-membered ring
+                            elif min_ring_size == 6:
+                                gaff_type = 'c6'  # sp3 C in six-membered ring
+                            else:
+                                gaff_type = 'c3'  # Generic sp3 C in larger rings
                     else:
                         gaff_type = 'c3'  # Generic sp3 C
                         
@@ -1647,59 +1664,73 @@ class MolecularAnalyzer:
                     
                     elif is_in_rings:
                         ring_size = min(len(self.rings[ring_idx]) for ring_idx in is_in_rings)
-                        if ring_size == 3:
-                            gaff_type = 'cu'  # sp2 C in three-membered ring
-                        elif ring_size == 4:
-                            gaff_type = 'cv'  # sp2 C in four-membered ring
-                        elif ring_size == 5:
-                            # Get all directly connected elements from connection list
-                            has_heteroatom_connection = False
-
-                            # Get the elements of connected atoms directly
-                            element_list = []
-                            for conn_id in connections:
-                                connected_atom = self.atoms[conn_id-1]
-                                element_list.append(connected_atom['element'])
-
-                            non_h_elements = [elem for elem in element_list if elem != 'H']
-
-                            if len(non_h_elements) >= 2:
-                                # cd is only when it's between two C, or C-N, or C-P
-                                if all(elem == 'C' for elem in non_h_elements) or \
-                                   (non_h_elements.count('C') == 1 and non_h_elements.count('N') == 1) or \
-                                   (non_h_elements.count('C') == 1 and non_h_elements.count('P') == 1):
-                                    has_heteroatom_connection = False  # Use cd
-                                else:
-                                    has_heteroatom_connection = True   # Use cc
-
-                            # If connected to any heteroatom, use cc, otherwise cd
-                            gaff_type = 'cc' if has_heteroatom_connection else 'cd'
-                        elif ring_size == 6:
-                            # Get all directly connected elements from connection list
-                            has_heteroatom_connection = False
-
-                            # Get the elements of connected atoms directly
-                            element_list = []
-                            for conn_id in connections:
-                                connected_atom = self.atoms[conn_id-1]
-                                element_list.append(connected_atom['element'])
-
-                            non_h_elements = [elem for elem in element_list if elem != 'H']
-
-                            if len(non_h_elements) >= 2:
-                                # cd is only when it's between two C, or C-N, or C-P
-                                if (non_h_elements.count('C') == 1 and non_h_elements.count('N') == 1) or \
-                                   (non_h_elements.count('C') == 1 and non_h_elements.count('P') == 1):
-                                    has_heteroatom_connection = True  # Use cd
-                                else:
-                                    has_heteroatom_connection = False   # Use cc
-
-                            # If connected to any heteroatom, use cc, otherwise cd
-                            gaff_type = 'cd' if has_heteroatom_connection else 'cc'
-
+                        # Check if any atom in the ring is a metal
+                        has_metal_in_ring = False
+                        for ring_idx in is_in_rings:
+                            ring = self.rings[ring_idx]
+                            for ring_atom_id in ring:
+                                ring_atom = self.atoms[ring_atom_id-1]
+                                ring_element = ring_atom['element'].upper()
+                                # Define metal elements 
+                                metal_elements = self.METAL_ELEMENTS 
+                                if ring_element in metal_elements:
+                                    has_metal_in_ring = True
+                                    break
+                            if has_metal_in_ring:
+                                break
+                        
+                        if has_metal_in_ring:
+                            gaff_type = 'c'
                         else:
-                            gaff_type = 'cc'  # Generic sp2 C in larger rings                    
+                            if ring_size == 3:
+                                gaff_type = 'cu'  # sp2 C in three-membered ring
+                            elif ring_size == 4:
+                                gaff_type = 'cv'  # sp2 C in four-membered ring
+                            elif ring_size == 5:
+                                # Get all directly connected elements from connection list
+                                has_heteroatom_connection = False
 
+                                # Get the elements of connected atoms directly
+                                element_list = []
+                                for conn_id in connections:
+                                    connected_atom = self.atoms[conn_id-1]
+                                    element_list.append(connected_atom['element'])
+
+                                non_h_elements = [elem for elem in element_list if elem != 'H']
+
+                                if len(non_h_elements) >= 2:
+                                    # cd is only when it's between two C, or C-N, or C-P
+                                    if all(elem == 'C' for elem in non_h_elements) or \
+                                       (non_h_elements.count('C') == 1 and non_h_elements.count('N') == 1) or \
+                                       (non_h_elements.count('C') == 1 and non_h_elements.count('P') == 1):
+                                        has_heteroatom_connection = False  # Use cd
+                                    else:
+                                        has_heteroatom_connection = True   # Use cc
+
+                                # If connected to any heteroatom, use cc, otherwise cd
+                                gaff_type = 'cc' if has_heteroatom_connection else 'cd'
+                            elif ring_size >= 6:
+                                    # Get all directly connected elements from connection list
+                                    has_heteroatom_connection = False
+
+                                    # Get the elements of connected atoms directly
+                                    element_list = []
+                                    for conn_id in connections:
+                                        connected_atom = self.atoms[conn_id-1]
+                                        element_list.append(connected_atom['element'])
+
+                                    non_h_elements = [elem for elem in element_list if elem != 'H']
+
+                                    if len(non_h_elements) >= 2:
+                                        # cd is only when it's between two C, or C-N, or C-P
+                                        if (non_h_elements.count('C') == 1 and non_h_elements.count('N') == 1) or \
+                                           (non_h_elements.count('C') == 1 and non_h_elements.count('P') == 1):
+                                            has_heteroatom_connection = True  # Use cd
+                                        else:
+                                            has_heteroatom_connection = False   # Use cc
+
+                                    # If connected to any heteroatom, use cd, otherwise cc
+                                    gaff_type = 'cd' if has_heteroatom_connection else 'cc'
                     else:
                         # Check if this is part of a guanidine group
                         connected_to_n = sum(1 for conn_id in connections
@@ -1775,7 +1806,7 @@ class MolecularAnalyzer:
                     else:
                         gaff_type = 'c1'  # Generic sp C
                 else:
-                    gaff_type = 'cc'  # Generic carbon
+                    gaff_type = 'c2'  # Generic carbon
  
             # Handle nitrogen atoms
             elif element == 'N':
@@ -1944,6 +1975,9 @@ class MolecularAnalyzer:
  
                 elif hybridization == 'sp':
                     gaff_type = 'n1'  # sp N (triple bonded)
+                else:
+                    gaff_type = 'n'
+
              
             elif element == 'O':
                 if hybridization == 'sp3':
@@ -1980,7 +2014,9 @@ class MolecularAnalyzer:
                     if is_carbonyl or len(connections) == 1:
                         gaff_type = 'o'  # sp2 O in C=O, COO-
                     else:
-                        gaff_type = 'od'  # Default to ether/ester oxygen
+                        gaff_type = 'os'  # Default to ether/ester oxygen
+                else:
+                    gaff_type = 'os'
             
             # Handle other common elements
             elif element == 'S':
@@ -2160,7 +2196,6 @@ class MolecularAnalyzer:
                 atom2_id = cd_atoms[j]
                 # Check if these atoms have a bond between them
                 key = frozenset([atom1_id, atom2_id])
-                print(key)
                 if key in self.bond_dict:
                     # Get the bond type
                     #bond_type = self.bond_dict[key]['type']

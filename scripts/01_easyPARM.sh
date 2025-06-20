@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
+#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -302,7 +302,9 @@ run_antechamber_gaussian() {
         # Check if COMPLEX.mol2 was generated after all attempts
         if [ ! -f "$RUN_DIR/COMPLEX.mol2" ]; then
             echo "  "
-	    echo "Failed to generate COMPLEX.mol2 after multiple attempts. Please verify the availability of Antechamber."
+	    echo "Failed to generate COMPLEX.mol2 after multiple attempts."
+	    echo -e "\n\033[0;31mPlease verify the availability of Antechamber.\033[0m"
+	    echo " " 
             retry=$(get_valid_input "Would you like to provide a different charge output file? (y/n)" "y n")
             case "$retry" in
                 [yY]) 
@@ -402,7 +404,9 @@ run_antechamber_orca() {
     # Check if COMPLEX.mol2 was generated after all attempts
     if [ ! -f "$RUN_DIR/COMPLEX.mol2" ]; then
         echo " "
-	echo "Failed to generate COMPLEX.mol2 after multiple attempts. Please verify the availability of Antechamber."
+	echo "Failed to generate COMPLEX.mol2 after multiple attempts."
+	echo -e "\n\033[0;31mPlease verify the availability of Antechamber.\033[0m"
+	echo " " 
         retry=$(get_valid_input "Would you like to provide a different charge output file? (y/n)" "y n")
         case "$retry" in
             [yY]) 
@@ -510,7 +514,10 @@ run_antechamber_gamess() {
     # Check if COMPLEX.mol2 was generated after all attempts
     if [ ! -f "$RUN_DIR/COMPLEX.mol2" ]; then
         echo " "
-	echo "Failed to generate COMPLEX.mol2 after multiple attempts. Please verify the availability of Antechamber."
+	echo "Failed to generate COMPLEX.mol2 after multiple attempts. "
+	echo -e "\n\033[0;31mPlease verify the availability of Antechamber.\033[0m"
+	echo " " 
+
         retry=$(get_valid_input "Would you like to provide a different charge output file? (y/n)" "y n")
         case "$retry" in
             [yY]) 
@@ -580,6 +587,14 @@ case $qm_output in
                 break
             done
             python3 "$SCRIPT_DIR/Seminario_method_ORCA.py" "$RUN_DIR/$orca_hessian" "$RUN_DIR/$orca_output" > "$RUN_DIR/temp.dat"
+	    
+	    if [ $? -ne 0 ]; then
+		    echo "Failed to execute Seminario_method_ORCA.py. Exiting."
+		    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+
+		    exit 1
+	    fi
+
         elif [ "$charge_output" -eq 2 ]; then
             while true; do
                 echo " "
@@ -591,6 +606,12 @@ case $qm_output in
                 break
             done
             python3 "$SCRIPT_DIR/Seminario_method_ORCA.py" "$RUN_DIR/$orca_hessian" "$RUN_DIR/$charge_data" > "$RUN_DIR/temp.dat"
+	    if [ $? -ne 0 ]; then
+		    echo "Failed to execute Seminario_method_ORCA.py. Exiting."
+		    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+
+		    exit 1
+	    fi
         fi
         ;;
     2)
@@ -609,6 +630,7 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_GAUSSIAN.py" "$RUN_DIR/$gaussian_output" 2 > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_GAUSSIAN.py. Exiting."
+	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
             exit 1
         fi
         ;;
@@ -660,6 +682,7 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_GAUSSIAN.py" "$RUN_DIR/complex.fchk" 3 > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_GAUSSIAN.py. Exiting."
+	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
             exit 1
         fi
         ;;
@@ -686,6 +709,7 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_GAUSSIAN.py" "$RUN_DIR/complex.fchk" 4 > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_GAUSSIAN.py. Exiting."
+	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
             exit 1
         fi
         ;;
@@ -705,6 +729,7 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_GAMESS.py" "$RUN_DIR/$gamess_output" > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_GAMESS.py. Exiting."
+	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
             exit 1
         fi
         ;;
@@ -758,7 +783,7 @@ for script in 03_correct_mol2.py 04_parmch2_frcmod.sh; do
         fi
     elif [[ $script == *.sh ]]; then
         if [ -f "$SCRIPT_DIR/$script" ]; then
-            bash "$SCRIPT_DIR/$script" "$RUN_DIR"
+            bash "$SCRIPT_DIR/$script" "$RUN_DIR" "$atom_type"
             if [ $? -ne 0 ]; then
                 echo "Failed to execute $script. Exiting."
                 exit 1
@@ -865,6 +890,7 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
    
     python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/part_QM.xyz" "$RUN_DIR/part_QM.pdb"
     antechamber -i "$RUN_DIR/part_QM.pdb" -fi pdb -o "$RUN_DIR/QM.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
+  
     sed -i '$d' "$RUN_DIR/nonstand.pdb"
     cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/nonstand.pdb"
     cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/easynonstands.pdb"
@@ -880,12 +906,12 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     	fi
     
     # Run the antechamber command
-    	antechamber -i "$pdbout" -fi pdb -o "$mol2out" -fo mol2 -s 2 -rn "$residue_name" 
+    	antechamber -i "$pdbout" -fi pdb -o "$mol2out" -fo mol2 -s 2 -rn "$residue_name"  
     done < "$input_file" > "$RUN_DIR/temp.dat" 2>&1
 
      
     python3 "$SCRIPT_DIR/update_metalloprotein_charge.py" 
-    mv "$RUN_DIR/QM.mol2" "$RUN_DIR/COMPLEX.mol2"
+    cp "$RUN_DIR/QM.mol2" "$RUN_DIR/COMPLEX.mol2"
     python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/part_QM.xyz"
     python3 "$SCRIPT_DIR/03_correct_mol2.py" 
     mv "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/QM.mol2"
@@ -914,33 +940,51 @@ done
 mv filtered_COMPLEX_modified2.frcmod COMPLEX.frcmod
 cp NEW_COMPLEX.mol2 COMPLEX.mol2 
 
+awk '
+/^ANGLE/,/^DIHE/ {
+if ($2 ~ /[0-9]/) {
+    if ($2 < 5) {
+	$2 = $2 * 11.599
+    } else if ($2 < 10) {
+	$2 = $2 * 7.799
+    } else if ($2 < 20) {
+	$2 = $2 * 3.599
+    } else if ($2 < 29) {
+	$2 = $2 * 2.699
+    }
+}
+print
+next
+}
+{ print }' "$RUN_DIR/COMPLEX.frcmod" > "$RUN_DIR/temp.frcmod"
+mv "$RUN_DIR/temp.frcmod" "$RUN_DIR/COMPLEX.frcmod"
+
+awk '
+/^BOND/,/^ANGLE/ {
+if ($2 ~ /[0-9]/) {
+    if ($2 < 20) {
+	$2 = $2 * 4.599
+    }
+}
+print
+next
+}
+{ print }' "$RUN_DIR/COMPLEX.frcmod" > "$RUN_DIR/temp.frcmod"
+mv "$RUN_DIR/temp.frcmod" "$RUN_DIR/COMPLEX.frcmod"
+
 resid_ID=$(get_valid_input "Would you like to change the residue ID (Default= mol)? (y/n): " "y n yes no Y N YES NO Yes No")
     if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
 	    read -r -p "Please provide the residue name: " resid_name
     fi
 
 if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+    python3 "$SCRIPT_DIR/metalloprotein_parm.py" > "$RUN_DIR/temp.dat" 2>&1
+    
     mv "$RUN_DIR/nonstand.pdb" "$RUN_DIR/easyPARM_MetalloProtein.pdb"
     pdb4amber -i "$RUN_DIR/easyPARM_MetalloProtein.pdb" -o "$RUN_DIR/easyPARM_MetalloProtein2.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
     mv "$RUN_DIR/easyPARM_MetalloProtein2.pdb" "$RUN_DIR/easyPARM_MetalloProtein.pdb" 
     mv "$RUN_DIR/QM.mol2" "$RUN_DIR/METAL.mol2"
     mv "$RUN_DIR/coordinated_residues.txt" "$RUN_DIR/Bond_Info.dat"
-    awk '
-    /^ANGLE/,/^DIHE/ {
-        if ($2 ~ /[0-9]/) {
-            if ($2 < 10) {
-                $2 = $2 * 4.299
-            } else if ($2 < 20) {
-                $2 = $2 * 2.799
-            } else if ($2 < 29) {
-                $2 = $2 * 1.699
-            }
-        }
-        print
-        next
-    }
-    { print }' "$RUN_DIR/COMPLEX.frcmod" > "$RUN_DIR/temp.frcmod"
-    mv "$RUN_DIR/temp.frcmod" "$RUN_DIR/COMPLEX.frcmod"
     echo "  "
     
 
@@ -1069,7 +1113,7 @@ fi
 
 if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 	rm COMPLEX.mol2
-        rm COMPLEX.pdb	
+	rm COMPLEX.pdb	
 	rm metalloprotein_easyPARM_*
 	rm *_renum.txt
 	rm *_sslink
@@ -1079,8 +1123,9 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 	rm processed_charges.dat
 	rm original_charges.dat
 	rm coordination_analysis.txt
-        rm charge_statistics.txt	
+	rm charge_statistics.txt	
 	rm fixed_charges.dat
+		
 fi
 # Remove the unnecessary file
 rm ANTECHAMBER*
@@ -1088,11 +1133,12 @@ files_to_remove=("dihedral.dat" "distance.dat" "esout" "atom_type.dat" "COMPLEX_
     "complex.fchk" "forcefield2.dat" "metal_number.dat" "temp_COMPLEX_modified.frcmod" "new_atomtype.dat" \
     "temp.dat" "updated_COMPLEX_modified.frcmod" "updated_COMPLEX_modified2.frcmod" "angle.dat" "new_atomtype1.dat"\
     "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "mol.pdb" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat" "REFQM.pdb" "NEW_COMPLEX.mol2"\
-    "QM.pdb" "nonstand.pdb" "part_QM.xyz" "part_QM.pdb" "charge_qm.dat" "metalloprotein.pdb" "metalloprotein_easyPARM.pdb" "charges_all.dat" "easynonstands.pdb" "easyPARM.pdb" "easyPARM_residues.dat" "reference_structure.xyz" "ALL_RESIDUE_tleap.input" "ZEMA.mol2" "easyPARM_atomtype.dat") 
+    "QM.pdb" "nonstand.pdb" "part_QM.xyz" "part_QM.pdb" "charge_qm.dat" "metalloprotein.pdb" "metalloprotein_easyPARM.pdb" "charges_all.dat" "easynonstands.pdb" "easyPARM.pdb" "easyPARM_residues.dat" "reference_structure.xyz" "ALL_RESIDUE_tleap.input" "ZEMA.mol2" "easyPARM_atomtype.dat" "easyPARM.mol2" "COMREF.mol2" "COMPLEX.frcmod.bak" "metalloprotein_atomtype.dat" ) 
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
         rm -f "$file"
+	
     fi
 done
 
@@ -1432,6 +1478,7 @@ fi
     rm -f "$RUN_DIR/a" "$RUN_DIR/b" "$RUN_DIR/c" "$RUN_DIR/tmpfile" complex_esp.in complex_esp.out complex_esp.qin complex_esp.chg complex_esp.pch esp.dat charges.dat restraint_info.dat oldCOMPLEX.mol2 oldCOMPLEX.lib leap.log
 else
     echo "No charge restraints applied. Exiting."
+
 fi
 
 files_to_remove=( "similar.dat" "input_library.tleap" "distance_type.dat" "tempz.fchk" "atomic_number.dat" "charges.dat" "resp.in" "temp.dat" "resp.out" "esp.chg" "bond_angle_dihedral_data.dat" "forcefield.dat" )
@@ -1441,3 +1488,8 @@ for file in "${files_to_remove[@]}"; do
         rm -f "$file"
     fi
 done
+
+echo " "
+echo -n "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+echo -e "\n\033[1;36m🏁 Crossed the finish line successfully! 🏁\033[0m"
+echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉"

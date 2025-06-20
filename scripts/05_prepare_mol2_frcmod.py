@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
+#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -17,7 +17,6 @@
 #Distributed under the GNU LESSER GENERAL PUBLIC LICENSE Version 2.1, February 1999                               #
 #Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es         #
 ###################################################################################################################
-
 
 # Function to read metal numbers from a file
 def read_metal_numbers(file_path):
@@ -69,19 +68,43 @@ used_atom_types = set()
 # Create a master list of all available counters for fallback
 all_available_counters = list('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
+# Function to read existing atom types from the mol2 file
+def read_existing_atom_types(mol2_file):
+    existing_types = set()
+    with open(mol2_file, 'r') as file:
+        lines = file.readlines()
+    
+    # Find the atom section
+    try:
+        atom_start = lines.index("@<TRIPOS>ATOM\n")
+        bond_start = lines.index("@<TRIPOS>BOND\n")
+        atom_lines = lines[atom_start + 1:bond_start]
+        
+        # Extract atom types from each line
+        for line in atom_lines:
+            parts = line.split()
+            if len(parts) >= 6:  # Ensure there are enough columns
+                atom_type = parts[5]
+                existing_types.add(atom_type)
+    except ValueError:
+        # Handle case where the file format is unexpected
+        print("Warning: Could not parse mol2 file sections properly")
+    
+    return existing_types
+
 #Generate a unique sequence of 12 single-character counters for each metal index.
 #Each metal index gets its own set of characters (with some reuse across different indices).
 def get_counter_for_metal(metal_index, atom_type):
     # Dividing standard alphanumeric characters among 12 metal indices
     if metal_index == 1:
         # Digits 0-9 + a,b (12 characters)
-        return iter(list('0123456789ab'))
+        return iter(list('1234567891ab'))
     elif metal_index == 2:
         # Uppercase A through L (12 characters)
         return iter(list('ABCDEFGHIJKL'))
     elif metal_index == 3:
         # Lowercase c through n (12 characters)
-        return iter(list('cdefghijklmn'))
+        return iter(list('abcdefghijklmn'))
     elif metal_index == 4:
         # Lowercase o through z (12 characters)
         return iter(list('opqrstuvwxyz'))
@@ -133,7 +156,19 @@ def get_counter_for_metal(metal_index, atom_type):
     elif metal_index == 20:
         # Another set reusing alphanumeric chars
         return iter(list('6789abcdefgh'))
-    elif metal_index == 21:
+    elif metal_index == 22:
+        # Another set reusing alphanumeric chars
+        return iter(list('ijklmnopqrst'))
+    elif metal_index == 23:
+        # Another set reusing alphanumeric chars
+        return iter(list('ijklmnopqrst'))
+    elif metal_index == 24:
+        # Another set reusing alphanumeric chars
+        return iter(list('ijklmnopqrst'))
+    elif metal_index == 25:
+        # Another set reusing alphanumeric chars
+        return iter(list('ijklmnopqrst'))
+    elif metal_index == 26:
         # Another set reusing alphanumeric chars
         return iter(list('ijklmnopqrst'))
     else:
@@ -175,6 +210,13 @@ def get_unique_new_atom_type(atom_type, metal_index):
 
 # Function to update the mol2 file with new atom types
 def update_mol2_file(atom_positions, mol2_file, new_file, metal_positions, bonds):
+    # First, read all existing atom types from the mol2 file
+    existing_types = read_existing_atom_types(mol2_file)
+    
+    # Add existing types to our used_atom_types set
+    global used_atom_types
+    used_atom_types.update(existing_types)
+    
     with open(mol2_file, 'r') as file:
         lines = file.readlines()
     # Find the start of atom and bond sections
@@ -184,6 +226,7 @@ def update_mol2_file(atom_positions, mol2_file, new_file, metal_positions, bonds
     two_letter_counters = {}
     updated_lines = []
     new_atom_types = []
+    original_atom_types = []  # New list to store original atom types
     atom_names = []  # New list to store atom names
     
     for line in atom_lines:
@@ -199,11 +242,20 @@ def update_mol2_file(atom_positions, mol2_file, new_file, metal_positions, bonds
         if atom_id in atom_positions:
             for metal_index, metal in enumerate(metal_positions):
                 if atom_id in bonds.get(metal, []):
+                    # Store the original atom type before any modification
+                    original_atom_type = atom_type
+                    
                     if normalized_atom_type in normal_two_letter_elements:
                         # Use or initialize a counter for this specific non-metal two-letter element
                         if normalized_atom_type not in two_letter_counters:
                             two_letter_counters[normalized_atom_type] = 1
                         new_atom_type = f"{normalized_atom_type}{two_letter_counters[normalized_atom_type]}"
+                        
+                        # Check if this new_atom_type already exists in our comprehensive list
+                        while new_atom_type in used_atom_types:
+                            two_letter_counters[normalized_atom_type] += 1
+                            new_atom_type = f"{normalized_atom_type}{two_letter_counters[normalized_atom_type]}"
+                            
                         two_letter_counters[normalized_atom_type] += 1
                     elif normalized_atom_type in metal_two_letter_elements:
                         # Keep the metal element unchanged
@@ -215,6 +267,7 @@ def update_mol2_file(atom_positions, mol2_file, new_file, metal_positions, bonds
                     
                     atom_type = new_atom_type
                     new_atom_types.append(new_atom_type)
+                    original_atom_types.append(original_atom_type)  # Store the original atom type
                     # Store just the letter part of the atom name (remove numbers)
                     base_atom_name = ''.join(c for c in atom_name if not c.isdigit())
                     atom_names.append(base_atom_name)  # Store the corresponding atom name without numbers
@@ -229,10 +282,15 @@ def update_mol2_file(atom_positions, mol2_file, new_file, metal_positions, bonds
         file.writelines(updated_lines)  # Write modified atoms
         file.writelines(lines[bond_start:])  # Write everything after atoms
     
-    # Write new atom types to new_atomtype.dat
+    # Write new atom types and original atom types to new_atomtype.dat
     with open('new_atomtype.dat', 'w') as file:
-        for new_atom_type in new_atom_types:
-            file.write(new_atom_type + '\n')
+        for new_type, orig_type in zip(new_atom_types, original_atom_types):
+            file.write(f"{new_type} \n")
+    
+    # Write new atom types and original atom types to new_atomtype.dat
+    with open('metalloprotein_atomtype.dat', 'w') as file:
+        for new_type, orig_type in zip(new_atom_types, original_atom_types):
+            file.write(f"{new_type} {orig_type}\n")
     
     # Write hybridization information to Hybridization_info.dat
     with open('Hybridization_Info.dat', 'w') as file:

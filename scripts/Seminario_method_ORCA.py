@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
+#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -179,7 +179,7 @@ def calculate_bond_force_constant(hessian, coordinates, idx1, idx2):
     # and weighting it by the corresponding eigenvalue
     force_constant = sum((np.dot(eigvecs[:, i], unit_vec12)**2) * eigvals[i] for i in range(3))
     force_constant = abs(force_constant)
-    # Convert force constant from atomic units (Hartree/Bohr^2) to kcal/mol/Ãƒâ€¦^2
+    # Convert force constant from atomic units (Hartree/Bohr^2) to kcal/mol/Ã^2
     force_constant_in_kcal = 627.509474 * force_constant  # 627.509474 is the conversion factor
 
     # Apply the harmonic approximation (factor of 2)

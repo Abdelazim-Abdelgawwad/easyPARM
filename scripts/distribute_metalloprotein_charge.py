@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 3.30 - 5 May 2025                                     #
+#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -989,7 +989,7 @@ def update_mol2_file(input_mol2, charge_file='recalculated_charges.dat', output_
         raise
 
 def main():
-    parser = argparse.ArgumentParser(description='Analyze metal coordination sites and process charges with methyl group additions')
+    parser = argparse.ArgumentParser(description='Analyze metal coordination sites ')
     parser.add_argument('pdb_file', help='Input PDB file to analyze')
     parser.add_argument('mol2_file', help='Input MOL2 file containing charges')
     parser.add_argument('target_charge', type=float, help='Target total charge for the system')
