@@ -11,6 +11,12 @@ This ensures more **accurate atom typing** using **molecular topology**, **ring 
 🧬 **ff19SB for Metal-Coordinated Standard Residues**
 Standard amino acid residues **coordinated to metal centers** are now typed using **ff19SB**, improving structural realism and parameter consistency in **metal-binding proteins**.
 
+🔬 **Updated Non-Bonded Parameters for metals**  
+  includes updated **Lennard-Jones (van der Waals) parameters** for metal:
+  - **Monovalent metal ions** from [Li et al., *J. Chem. Inf. Model.* (2021)](https://doi.org/10.1021/acs.jcim.0c01390)
+  - **Divalent metal ions** from [Zhang et al., *J. Chem. Theory Comput.* (2021)](https://doi.org/10.1021/acs.jctc.0c00194)  
+  These updates provide better consistency with **AMBER-compatible force fields** and improve the reliability of **ion–ligand interaction modeling**.
+
 🚨 **Bug Fixes**
 Numerous bugs have been fixed for better stability. 
 
