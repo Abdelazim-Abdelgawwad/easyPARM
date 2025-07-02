@@ -272,7 +272,7 @@ run_antechamber_gaussian() {
 		python3 "$SCRIPT_DIR/03_correct_mol2.py" "$RUN_DIR"
 
 		python3 "$SCRIPT_DIR/atomtype_helper.py" "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/distance_type.dat" "$RUN_DIR/COMREF.mol2" > "$RUN_DIR/temp.dat" 2>&1
-		python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/COMREF.mol2" > "$RUN_DIR/temp.dat" 2>&1 
+		python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/COMREF.mol2" "$RUN_DIR/distance.dat" "$RUN_DIR/angle.dat" > "$RUN_DIR/temp.dat" 2>&1 
 		if [ -f "$RUN_DIR/easyPARM.mol2" ]; then
 			cp "$RUN_DIR/easyPARM.mol2" "$RUN_DIR/COMPLEX.mol2"
 		fi
@@ -376,7 +376,7 @@ run_antechamber_orca() {
 	    # Update the bond section in mol2
 	    python3 "$SCRIPT_DIR/atomtype_helper.py" "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/distance_type.dat" "$RUN_DIR/COMREF.mol2" > "$RUN_DIR/temp.dat" 2>&1
 	    # Detect the atom type
-	    python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/COMREF.mol2" > "$RUN_DIR/temp.dat" 2>&1 
+	    python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/COMREF.mol2" "$RUN_DIR/distance.dat" "$RUN_DIR/angle.dat" > "$RUN_DIR/temp.dat" 2>&1 
 	    if [ -f "$RUN_DIR/easyPARM.mol2" ]; then
 		    cp "$RUN_DIR/easyPARM.mol2" "$RUN_DIR/COMPLEX.mol2"
 	    fi
@@ -486,7 +486,7 @@ run_antechamber_gamess() {
 	    python3 "$SCRIPT_DIR/03_correct_mol2.py" "$RUN_DIR"
 	    # 
 	    python3 "$SCRIPT_DIR/atomtype_helper.py" "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/distance_type.dat" "$RUN_DIR/ZEMA.mol2" > "$RUN_DIR/temp.dat" 2>&1
-	    python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/ZEMA.mol2" > "$RUN_DIR/temp.dat" 2>&1 
+	    python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/ZEMA.mol2" "$RUN_DIR/distance.dat" "$RUN_DIR/angle.dat" > "$RUN_DIR/temp.dat" 2>&1 
 	    if [ -f "$RUN_DIR/easyPARM.mol2" ]; then
 		    mv "$RUN_DIR/easyPARM.mol2" "$RUN_DIR/COMPLEX.mol2"
 	    fi
