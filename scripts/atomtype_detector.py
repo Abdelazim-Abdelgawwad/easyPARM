@@ -2014,7 +2014,7 @@ class MolecularAnalyzer:
                     if is_carbonyl or len(connections) == 1:
                         gaff_type = 'o'  # sp2 O in C=O, COO-
                     else:
-                        gaff_type = 'os'  # Default to ether/ester oxygen
+                        gaff_type = 'o'  # Default to ether/ester oxygen
                 else:
                     gaff_type = 'os'
             
