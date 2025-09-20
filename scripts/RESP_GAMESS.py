@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
+#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -142,7 +142,7 @@ def write_resp_input(file_path, charge, atomic_numbers, zeros_mapping):
         f.write(" /\n")
         f.write("    1.0\n")
         f.write("TITLE\n")
-        f.write(f"    {charge}   {len(atomic_numbers)}\n")
+        f.write(f"   {charge}   {len(atomic_numbers)}\n")
 
         for i, atomic_number in enumerate(atomic_numbers, start=1):
             zeros_value = zeros_mapping.get(i, 0)

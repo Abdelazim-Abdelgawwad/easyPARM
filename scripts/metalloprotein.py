@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
+#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -205,7 +205,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_
     standard_residues = {
         "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
         "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
-        "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL"
+        "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", 'HIS'
     }
 
     # Get the script paths
@@ -403,7 +403,7 @@ def extract_non_standard_residues_from_ref(ref_pdb, output_pdb="part_QM.pdb", ou
         standard_residues = {
             "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN", "GLU", "GLY", 
             "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS", "MET", "PHE", "PRO", "SER", 
-            "THR", "TRP", "TYR", "VAL"
+            "THR", "TRP", "TYR", "VAL", 'HIS'
         }
 
     # Get complete set of residue names from the input PDB file
@@ -778,7 +778,7 @@ def generate_easyparm_residues(residue_name_mapping, output_file="easyPARM_resid
         standard_residues = {
             "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
             "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
-            "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL"
+            "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", 'HIS'
         }
 
         # List to hold the special residues

@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
+#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -83,6 +83,16 @@ def read_dihe_data(file_path):
                     dihe_data.add(dihe_reversed)
     return dihe_data
 
+#Check if all three bond pairs from an improper exist in the reference bonds.
+def check_improper_bonds_exist(col1, col2, col3, col4, reference_bonds):
+    # Extract the three bond pairs from improper: col1-col2, col2-col3, col3-col4
+    bond1 = tuple(sorted([col1.strip(), col2.strip()]))
+    bond2 = tuple(sorted([col2.strip(), col3.strip()]))
+    bond3 = tuple(sorted([col3.strip(), col4.strip()]))
+    
+    # Check if all three bonds exist in reference bonds
+    return bond1 in reference_bonds and bond2 in reference_bonds and bond3 in reference_bonds
+
 #Clean MASS section .
 def clean_mass_section(lines):
     mass_entries = {}
@@ -150,12 +160,14 @@ def process_and_clean_frcmod_file(reference_file, frcmod_file, output_file):
     bond_section = False
     angle_section = False
     dihe_section = False
+    improper_section = False
     nonbon_section = False
     
     # Patterns for sections
     bond_pattern = re.compile(r"(\S+)\s*-\s*(\S+)")
     angle_pattern = re.compile(r"(\S+)\s*-\s*(\S+)\s*-\s*(\S+)")
     dihe_pattern = re.compile(r"(\S+)\s*-\s*(\S+)\s*-\s*(\S+)\s*-\s*(\S+)")
+    improper_pattern = re.compile(r"(\S+)\s*-\s*(\S+)\s*-\s*(\S+)\s*-\s*(\S+)")
     nonbon_pattern = re.compile(r"(\S+)\s+(\S+)\s+(\S+)")
 
     # Store unique NONBON entries
@@ -172,36 +184,37 @@ def process_and_clean_frcmod_file(reference_file, frcmod_file, output_file):
             if last_section != "MASS":  # Only add blank line if not following MASS section
                 output_lines.append("\n")
             bond_section = True
-            angle_section = dihe_section = nonbon_section = False
+            angle_section = dihe_section = improper_section = nonbon_section = False
             output_lines.append(original_line)
             last_section = "BOND"
             continue
         elif stripped_line == "ANGLE":
             output_lines.append("\n")
             angle_section = True
-            bond_section = dihe_section = nonbon_section = False
+            bond_section = dihe_section = improper_section = nonbon_section = False
             output_lines.append(original_line)
             last_section = "ANGLE"
             continue
         elif stripped_line == "DIHE":
             output_lines.append("\n")
             dihe_section = True
-            bond_section = angle_section = nonbon_section = False
+            bond_section = angle_section = improper_section = nonbon_section = False
             output_lines.append(original_line)
             last_section = "DIHE"
+            continue
+        elif stripped_line == "IMPROPER":
+            output_lines.append("\n")
+            improper_section = True
+            bond_section = angle_section = dihe_section = nonbon_section = False
+            output_lines.append(original_line)
+            last_section = "IMPROPER"
             continue
         elif stripped_line == "NONBON":
             output_lines.append("\n")
             nonbon_section = True
-            bond_section = angle_section = dihe_section = False
+            bond_section = angle_section = dihe_section = improper_section = False
             output_lines.append(original_line)
             last_section = "NONBON"
-            continue
-        elif stripped_line == "IMPROPER":
-            output_lines.append("\n")
-            bond_section = angle_section = dihe_section = nonbon_section = False
-            output_lines.append(original_line)
-            last_section = "IMPROPER"
             continue
 
         # Process each section
@@ -233,6 +246,16 @@ def process_and_clean_frcmod_file(reference_file, frcmod_file, output_file):
                 dihe1 = tuple([col1.strip(), col2.strip(), col3.strip(), col4.strip()])
                 dihe2 = tuple([col4.strip(), col3.strip(), col2.strip(), col1.strip()])
                 if dihe1 in reference_dihes or dihe2 in reference_dihes:
+                    output_lines.append(original_line)
+            else:
+                output_lines.append(original_line)
+
+        elif improper_section:
+            match = improper_pattern.match(stripped_line)
+            if match:
+                col1, col2, col3, col4 = match.groups()
+                # Check if all three bond pairs from improper exist in reference bonds
+                if check_improper_bonds_exist(col1, col2, col3, col4, reference_bonds):
                     output_lines.append(original_line)
             else:
                 output_lines.append(original_line)

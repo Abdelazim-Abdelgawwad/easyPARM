@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ###################################################################################################################
 #   Automated Force Fields for Metals     /$$$$$$$   /$$$$$$  /$$$$$$$  /$$      /$$                              # 
 #                                        | $$__  $$ /$$__  $$| $$__  $$| $$$    /$$$                              #
@@ -9,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
+#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -22,6 +21,7 @@
 
 import sys
 import re
+import os
 
 #Check the input file and return a dictionary of parameters.
 def check_input_file(input_path):
@@ -48,6 +48,53 @@ def check_input_file(input_path):
         sys.exit(1)
     
     return parameters
+
+#Generate PSI4 configuration file when QM_OUTPUT = 6
+def generate_psi4_config(parameters, output_dir):
+    config_lines = []
+    
+    # Required parameters
+    config_lines.append(f"# XYZ file containing the molecular structure (required)")
+    config_lines.append(f"XYZ = {parameters.get('STRUCTURE_FILE', 'OPTIMIZED.xyz')}")
+    config_lines.append("")
+    
+    config_lines.append(f"# Molecular charge (integer)")
+    config_lines.append(f"CHARGE = {parameters.get('CHARGE', '0')}")
+    config_lines.append("")
+    
+    config_lines.append(f"# Spin multiplicity (2S+1, where S is total spin)")
+    config_lines.append(f"MULTIPLICITY = {parameters.get('MULTIPLICITY', '1')}")
+    config_lines.append("")
+    
+    # Optional parameters with defaults
+    if 'CPU' in parameters:
+        config_lines.append(f"# Number of CPU cores to use")
+        config_lines.append(f"CPU = {parameters['CPU']}")
+        config_lines.append("")
+    
+    if 'MEMORY' in parameters:
+        config_lines.append(f"# Amount of memory to use (formats: 5GB, 500MB, 1000MB)")
+        config_lines.append(f"MEMORY = {parameters['MEMORY']}")
+        config_lines.append("")
+    
+    if 'METHOD' in parameters:
+        config_lines.append(f"# Quantum chemical method (optional, defaults to B3LYP)")
+        config_lines.append(f"METHOD = {parameters['METHOD']}")
+        config_lines.append("")
+    
+    if 'BASIS_SET' in parameters:
+        config_lines.append(f"# Basis set specification (optional)")
+        config_lines.append(f"BASIS_SET = {parameters['BASIS_SET']}")
+        config_lines.append("")
+    
+    # Write PSI4 config file
+    config_path = os.path.join(output_dir, "psi4.config")
+    try:
+        with open(config_path, 'w') as f:
+            f.write('\n'.join(config_lines))
+        print(f"PSI4 configuration file created: {config_path}")
+    except Exception as e:
+        print(f"Error writing PSI4 config file: {e}", file=sys.stderr)
 
 #Generate the input sequence for 01_easyPARM.sh based on parameters.
 def generate_input_for_easyparm(parameters):
@@ -86,27 +133,42 @@ def generate_input_for_easyparm(parameters):
     
     # 6. CHARGE_METHOD
     charge_method = get_param("CHARGE_METHOD", "1")
-    inputs.append(charge_method)
     
     # Conditional inputs based on CHARGE_METHOD
     if charge_method == "1":  # RESP (GAUSSIAN)
+        inputs.append(charge_method)
         inputs.append(get_param("INPUT_FORMAT", "1"))
         inputs.append(get_param("METHOD", "1"))
         inputs.append(get_param("ATOM_TYPE", "1"))
         inputs.append(get_param("CHARGE_OUTPUT", "output.log"))
     elif charge_method == "2":  # CHELPG (ORCA)
+        inputs.append(charge_method)
         inputs.append(get_param("ATOM_TYPE", "1"))
         inputs.append(get_param("CHARGE_OUTPUT", "output.out"))
     elif charge_method == "3":  # RESP (ORCA)
+        inputs.append(charge_method)
         inputs.append(get_param("ATOM_TYPE", "1"))
         inputs.append(get_param("CHARGE_OUTPUT", "output.vpot"))
     elif charge_method == "4":  # RESP (GAMESS)
+        inputs.append(charge_method)
         inputs.append(get_param("ATOM_TYPE", "1"))
         inputs.append(get_param("CHARGE_OUTPUT", "output.dat"))
     elif charge_method == "5":  # GAMESS CHARGES
+        inputs.append(charge_method)
         inputs.append(get_param("ATOM_TYPE", "1"))
         inputs.append(get_param("CHARGE_OUTPUT", "output.log"))
-    
+    elif charge_method == "6":  # PSI4 RESP CHARGES
+        psi_on = get_param("PSI4", "ON").strip().lower()
+
+        true_values = {"y", "yes", "true", "on"}
+        false_values = {"n", "no", "false", "off"}
+
+        if psi_on in true_values:
+            inputs.append("6")
+        elif psi_on in false_values:
+            inputs.append("7")
+        inputs.append(get_param("ATOM_TYPE", "1"))
+
     # 7. QM_OUTPUT
     qm_output = get_param("QM_OUTPUT", "2")
     inputs.append(qm_output)
@@ -130,6 +192,9 @@ def generate_input_for_easyparm(parameters):
         inputs.append(get_param("FCHK_FILE", "output.fchk"))
     elif qm_output == "5":  # Gamess Output
         inputs.append(get_param("GAMESS_OUTPUT", "output.dat"))
+    elif qm_output == "6":  # PSI4 Output
+        # For PSI4, no additional inputs needed here as config file is generated separately
+        pass
     
     # 8. METALLOPROTEIN
     metalloprotein = get_param("METALLOPROTEIN", "no", required=False).lower()
@@ -208,7 +273,7 @@ def main():
         print("\nPlease correct your input file or continue with interactive mode", file=sys.stderr)
         sys.exit(1)
     
-    # Write to output file only if no parameters are missing
+    # Write to main output file
     try:
         with open(output_path, 'w') as f:
             for input_value in inputs:
@@ -217,6 +282,12 @@ def main():
         print(f"Error writing output file: {e}", file=sys.stderr)
         sys.exit(1)
     
+    # Generate PSI4 config file if QM_OUTPUT = 6
+    if parameters.get("QM_OUTPUT") == "6":
+        output_dir = os.path.dirname(output_path) if os.path.dirname(output_path) else "."
+        generate_psi4_config(parameters, output_dir)
+    
+    print(f"Main output file created: {output_path}")
     sys.exit(0)
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
+#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -429,7 +429,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
     standard_residues = {
         "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
         "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
-        "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL"
+        "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", 'HIS'
     }
 
     mol2_charges = extract_charges_from_mol2(mol2_file)

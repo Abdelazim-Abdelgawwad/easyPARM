@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.00 - 8 June 2025                                    #
+#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -162,11 +162,13 @@ get_user_input() {
     echo "================================="
     echo "Select the charge calculation method:"
     echo "1- GAUSSIAN (RESP Charges)"
-    echo "2- ORCA (CHELPG Charges)"
+    echo "2- ORCA (ORCA Fit Charges)"
     echo "3- ORCA (RESP Charges)"
     echo "4- GAMESS (RESP Charges)"
     echo "5- GAMESS (GAMESS Fit Charges)"
-    charge_output=$(get_valid_input "Enter your choice: " "1 2 3 4 5")
+    echo "6- PSI4 (RESP Charges)"
+    #echo "7- PSI4 (OFF)"
+    charge_output=$(get_valid_input "Enter your choice: " "1 2 3 4 5 6 7")
 
     if [ "$charge_output" -eq 1 ]; then
         get_gaussian_input
@@ -178,6 +180,10 @@ get_user_input() {
         get_gamess_input
     elif [ "$charge_output" -eq 5 ]; then
         get_gamess_input
+    elif [ "$charge_output" -eq 6 ]; then
+        get_psi4_input
+    elif [ "$charge_output" -eq 7 ]; then
+        get_psi4_input
     fi
 }
 
@@ -232,6 +238,10 @@ get_gamess_input() {
     run_antechamber_gamess
 }
 
+get_psi4_input() {
+    get_atom_type
+    run_antechamber_psi4
+}
 
 get_atom_type() {
     echo " "
@@ -294,6 +304,11 @@ run_antechamber_gaussian() {
                 if [ -f "$RUN_DIR/ONE.mol2" ]; then
                     cp "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
                 fi
+        	antechamber -i "$RUN_DIR/$charge_data" -fi "$input_form" -o "$RUN_DIR/ONE2.mol2" -fo mol2 -c "$method" -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1 
+		if [ -f "$RUN_DIR/ONE2.mol2" ]; then
+                    cp "$RUN_DIR/ONE2.mol2" "$RUN_DIR/COMPLEX.mol2"
+                fi
+
             fi
         else 
             break 
@@ -396,6 +411,10 @@ run_antechamber_orca() {
             if [ -f "$RUN_DIR/ONE.mol2" ]; then
                 mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
             fi
+	    antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/ONE2.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
+	    if [ -f "$RUN_DIR/ONE2.mol2" ]; then
+                    cp "$RUN_DIR/ONE2.mol2" "$RUN_DIR/COMPLEX.mol2"
+            fi
         fi
     else 
         break 
@@ -425,7 +444,7 @@ run_antechamber_orca() {
 
     # Update mol2 file with CHELPG charges (if selected)
     if [ "$charge_output" -eq 2 ]; then
-        awk '/CHELPG Charges/,/Total charge:/' "$RUN_DIR/$charge_data" | \
+        awk '/ Charges/,/Total charge:/' "$RUN_DIR/$charge_data" | \
             grep -E '^\s*[0-9]+' | \
             awk '{print $NF}' > "$RUN_DIR/charges.dat"
         cp "$RUN_DIR/charges.dat" "$RUN_DIR/charges.chg"
@@ -506,6 +525,10 @@ run_antechamber_gamess() {
             if [ -f "$RUN_DIR/ONE.mol2" ]; then
                 mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
             fi
+	    antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/ONE2.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
+	    if [ -f "$RUN_DIR/ONE2.mol2" ]; then
+                    cp "$RUN_DIR/ONE2.mol2" "$RUN_DIR/COMPLEX.mol2"
+            fi
         fi
     else 
         break 
@@ -546,6 +569,104 @@ run_antechamber_gamess() {
 
 }
 
+run_antechamber_psi4() {
+    
+     if [ "$charge_output" -eq 6 ]; then  
+	    if [ -f "$SCRIPT_DIR/PSI4.py" ]; then
+		python3 "$SCRIPT_DIR/PSI4.py"
+
+	    else
+		echo "Script PSI4.py not found in $SCRIPT_DIR. Exiting."
+		exit 1
+	    fi
+    fi
+
+    # Convert xyz to pdb
+    cp "$RUN_DIR/optimized.xyz" "$RUN_DIR/COMPLEX.xyz"
+    if [ -f "$SCRIPT_DIR/xyz_to_pdb.py" ]; then
+        python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/COMPLEX.xyz" "$RUN_DIR/COMPLEX.pdb"
+    else
+        echo "Script xyz_to_pdb.py not found in $SCRIPT_DIR. Exiting."
+        exit 1
+    fi
+    
+    # Check if the script was successful
+    if [ $? -ne 0 ]; then
+        echo "Failed to execute xyz_to_pdb.py. Exiting."
+        exit 1
+    fi
+     
+    # First antechamber attempt
+    antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -at "$at_type" -m "$multi_total" -dr no -j 5 > "$RUN_DIR/temp.dat" 2>&1
+    
+    # Apply our approach to detect the atom type.
+    if [[ "$atom_type" -eq 2 || "$atom_type" -eq 3 ]]; then
+
+	    # Revise the mol2
+	    python3 "$SCRIPT_DIR/03_correct_mol2.py" "$RUN_DIR"
+	    # 
+	    python3 "$SCRIPT_DIR/atomtype_helper.py" "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/distance_type.dat" "$RUN_DIR/ZEMA.mol2" > "$RUN_DIR/temp.dat" 2>&1
+	    python3 "$SCRIPT_DIR/atomtype_detector.py" "$RUN_DIR/ZEMA.mol2" "$RUN_DIR/distance.dat" "$RUN_DIR/angle.dat" > "$RUN_DIR/temp.dat" 2>&1 
+	    if [ -f "$RUN_DIR/easyPARM.mol2" ]; then
+		    mv "$RUN_DIR/easyPARM.mol2" "$RUN_DIR/COMPLEX.mol2"
+	    fi
+    fi
+      
+    # Revise Atom Type
+    python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
+    
+    # Additional processing steps
+    if [ ! -f "$RUN_DIR/limited_data.dat" ]; then
+        if [ -f "$RUN_DIR/no_metal.dat" ]; then
+            antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -s 2 -rn mol -m "$multi_total" -nc "$charge_total" -at "$at_type" > "$RUN_DIR/temp.dat" 2>&1
+        else 
+            python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
+            antechamber -i "$RUN_DIR/mol.pdb" -fi pdb -o "$RUN_DIR/ONE.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
+            python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
+            if [ -f "$RUN_DIR/ONE.mol2" ]; then
+                mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/COMPLEX.mol2"
+            fi
+	    antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/ONE2.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
+	    if [ -f "$RUN_DIR/ONE2.mol2" ]; then
+                    cp "$RUN_DIR/ONE2.mol2" "$RUN_DIR/COMPLEX.mol2"
+            fi
+        fi
+    else 
+        break 
+    fi
+    
+    # Check if COMPLEX.mol2 was generated after all attempts
+    if [ ! -f "$RUN_DIR/COMPLEX.mol2" ]; then
+        echo " "
+	echo "Failed to generate COMPLEX.mol2 after multiple attempts. "
+	echo -e "\n\033[0;31mPlease verify the availability of Antechamber.\033[0m"
+	echo " " 
+
+        retry=$(get_valid_input "Would you like to provide a different charge output file? (y/n)" "y n")
+        case "$retry" in
+            [yY]) 
+                echo "Retrying with a different charge output file..."
+                run_antechamber_orca
+                return
+                ;;
+            [nN]) 
+                echo "Exiting due to failed antechamber command."
+                exit 1
+                ;;
+        esac
+    else
+        echo "Antechamber command executed successfully. "
+    fi
+    
+    # Update mol2 file with PSI4 charges
+    if [[ "$charge_output" -eq 6 || "$charge_output" -eq 7 ]]; then
+	awk '{print $3}' "$RUN_DIR/resp_charges.dat" > "$RUN_DIR/charges.dat"
+        cp "$RUN_DIR/charges.dat" "$RUN_DIR/charges.chg"
+       	python3 "$SCRIPT_DIR/Retrieve_RESP_Charges.py"
+    fi
+
+}
+
 # Main execution
 get_user_input
 
@@ -560,8 +681,9 @@ echo "2- Gaussian Output"
 echo "3- Gaussian Checkpoint"
 echo "4- Gaussian Formatted Checkpoint"
 echo "5- Gamess Output"
+echo "6- PSI4 Output"
 
-qm_output=$(get_valid_input "Enter your choice: " "1 2 3 4 5")
+qm_output=$(get_valid_input "Enter your choice: " "1 2 3 4 5 6")
 
 case $qm_output in
     1)
@@ -733,6 +855,18 @@ case $qm_output in
             exit 1
         fi
         ;;
+    6)
+        echo " "
+        echo "You've selected PSI4 output"
+        # Execute the Seminario method to calculate bond, angle, and force constant parameters.
+        python3 "$SCRIPT_DIR/Seminario_method_PSI4.py" "$RUN_DIR/hessian.txt" "$RUN_DIR/optimized.xyz" "$RUN_DIR/resp_charges.dat" > "$RUN_DIR/temp.dat"
+        if [ $? -ne 0 ]; then
+            echo "Failed to execute Seminario_method_PSI4.py. Exiting."
+	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+            exit 1
+        fi
+        ;;
+
 esac
     
 if [ "$charge_output" -eq 3 ]; then
@@ -741,7 +875,7 @@ if [ "$charge_output" -eq 3 ]; then
 	# Read the first line, remove the space, and store it
         first_line=$(sed '1q;d' "$RUN_DIR/esp.in" | sed -E 's/^([[:space:]]+)([0-9]+)[[:space:]]+([0-9]+)/\1\2\3/')
 	# Replace the first line in the file
-        sed -i "1s/.*/$first_line/" "$RUN_DIR/esp.in"
+        sed -i'' "1s/.*/$first_line/" "$RUN_DIR/esp.in"
         # Generate the required input for resp calculation  
 	python3 "$SCRIPT_DIR/RESP_ORCA.py" "$RUN_DIR/$orca_hessian" $charge_total "$RUN_DIR/similar.dat" > "$RUN_DIR/temp.dat"
 	# Run resp 
@@ -891,7 +1025,7 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/part_QM.xyz" "$RUN_DIR/part_QM.pdb"
     antechamber -i "$RUN_DIR/part_QM.pdb" -fi pdb -o "$RUN_DIR/QM.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
   
-    sed -i '$d' "$RUN_DIR/nonstand.pdb"
+    sed -i'' '$d' "$RUN_DIR/nonstand.pdb"
     cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/nonstand.pdb"
     cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/easynonstands.pdb"
     pdb4amber -i "$RUN_DIR/easynonstands.pdb" -o "$RUN_DIR/easyPARM.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
@@ -1013,8 +1147,8 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 	    mv "$RUN_DIR/Hybridization_Info.dat" "$RUN_DIR/Hybridization_Info_${resid_name}.dat"
 	    mv "$RUN_DIR/easyPARM_MetalloProtein.pdb" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
 	    cp "$RUN_DIR/METAL.mol2" "$RUN_DIR/${resid_name}.mol2"
-	    sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/${resid_name}.mol2"
-	    sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
+	    sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/${resid_name}.mol2"
+	    sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
 
 	    echo "Mol2  		    	  : ${resid_name}.mol2"
 	    echo "Frcmod                    : COMPLEX_${resid_name}.frcmod"
@@ -1032,9 +1166,9 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     fi
 else 
     	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
-	    #sed -i -E "s/ mol /${resid_name}/g" "$RUN_DIR/COMPLEX.mol2"
-	    	sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.mol2"
-	    	sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.pdb"
+	    #sed -i  -E "s/ mol /${resid_name}/g" "$RUN_DIR/COMPLEX.mol2"
+	    	sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.mol2"
+	    	sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.pdb"
     	fi
 
 # Print all the output name
@@ -1069,7 +1203,7 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 	python3 "$SCRIPT_DIR/12_generate_lib.py" > "$RUN_DIR/temp.dat" 2>&1 
 	
 	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
-		sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
+		sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
 		rm "$RUN_DIR/COMPLEX.frcmod"
 		rm "$RUN_DIR/METAL.mol2"
 	fi
@@ -1088,7 +1222,7 @@ else
 
 	python3 "$SCRIPT_DIR/12_generate_lib.py" > "$RUN_DIR/temp.dat" 2>&1
 	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
-		sed -i "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
+		sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
 	fi
 
 fi
@@ -1239,7 +1373,7 @@ if [[ "${restrain_choice,,}" =~ ^(y|yes)$ ]]; then
 	# Read the first line, remove the space, and store it
         first_line=$(sed '1q;d' "$RUN_DIR/esp.dat" | sed -E 's/^([[:space:]]+)([0-9]+)[[:space:]]+([0-9]+)/\1\2\3/')
 # Replace the first line in the file
-        sed -i "1s/.*/$first_line/" "$RUN_DIR/esp.dat"
+        sed -i'' "1s/.*/$first_line/" "$RUN_DIR/esp.dat"
           
 	i=$(wc -l < "$RUN_DIR/atomic_number.dat")
 
@@ -1481,7 +1615,7 @@ else
 
 fi
 
-files_to_remove=( "similar.dat" "input_library.tleap" "distance_type.dat" "tempz.fchk" "atomic_number.dat" "charges.dat" "resp.in" "temp.dat" "resp.out" "esp.chg" "bond_angle_dihedral_data.dat" "forcefield.dat" )
+files_to_remove=( "similar.dat" "input_library.tleap" "distance_type.dat" "tempz.fchk" "atomic_number.dat" "charges.dat"  "bond_angle_dihedral_data.dat" "forcefield.dat" "ONE2.mol2" "psi4.config" "charges.chg")
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
