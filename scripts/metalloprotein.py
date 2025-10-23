@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
+#                              |  $$$$$$/              Ver. 4.15 - 17 October 2025                                #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -17,8 +17,6 @@
 #Distributed under the GNU LESSER GENERAL PUBLIC LICENSE Version 2.1, February 1999                               #
 #Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es         #
 ###################################################################################################################
-
-
 
 from Bio import PDB
 import numpy as np
@@ -369,6 +367,7 @@ def get_existing_residues(pdb_file):
     return existing_residues
 
 #Generates a unique residue name based on base_name. Increments a counter until a unique name is found.
+
 def generate_unique_residue_name(base_name, existing_residues, residue_type_count):
     # Initialize counter if not already done
     if base_name not in residue_type_count:
@@ -377,7 +376,32 @@ def generate_unique_residue_name(base_name, existing_residues, residue_type_coun
         residue_type_count[base_name] += 1
 
     while True:
-        candidate = f"{base_name}{residue_type_count[base_name]}"
+        count = residue_type_count[base_name]
+
+        # Determine which pattern and digit to use
+        if count <= 9:
+            # Pattern 1: CY1-CY9 (digit at position 2)
+            candidate = f"{base_name}{count}"
+        elif count <= 18:
+            # Pattern 2: 1CY-9CY (digit at position 0)
+            digit = count - 9
+            candidate = f"{digit}{base_name}"
+        elif count <= 27:
+            # Pattern 3: C1Y-C9Y (digit at position 1)
+            digit = count - 18
+            candidate = f"{base_name[0]}{digit}{base_name[1]}"
+        else:
+            # Cycle back: repeat the patterns
+            cycle_position = ((count - 1) % 27) + 1
+            if cycle_position <= 9:
+                candidate = f"{base_name}{cycle_position}"
+            elif cycle_position <= 18:
+                digit = cycle_position - 9
+                candidate = f"{digit}{base_name}"
+            else:
+                digit = cycle_position - 18
+                candidate = f"{base_name[0]}{digit}{base_name[1]}"
+
         if candidate not in existing_residues:
             # Add candidate to the set to avoid future conflicts
             existing_residues.add(candidate)
@@ -622,19 +646,29 @@ def generate_nonstand_pdb(input_pdb, part_qm_pdb, output_pdb="nonstand.pdb"):
         rename_mapping = {}
         for filename in os.listdir():
             if (filename.endswith('.pdb') and 
-                len(filename) == 7 and  # e.g., "HI1.pdb"
-                filename[2].isdigit()):  
-                new_name = filename[:3]  # e.g., "HI1"
-                
+                len(filename) == 7):  # e.g., "HI1.pdb"
+                    if filename[2].isdigit():  # CY1
+                        new_name = filename[:3]
+                    elif filename[0].isdigit():  # 1CY
+                        new_name = filename[:3]
+                    elif filename[1].isdigit():  # C1Y
+                        new_name = filename[:3]
+                    else:
+                        # If none of the patterns match, skip this file
+                        continue
+
                 # Read the first ATOM/HETATM line to get residue info
-                with open(filename, 'r') as f:
-                    for line in f:
-                        if line.startswith(("ATOM", "HETATM")):
-                            resnum = int(line[22:26])
-                            # Store mapping by resnum
-                            rename_mapping[resnum] = new_name
-                            break
-        
+                    try:
+                        with open(filename, 'r') as f:
+                            for line in f:
+                                if line.startswith(("ATOM", "HETATM")):
+                                    resnum = int(line[22:26])
+                                    # Store mapping by resnum
+                                    rename_mapping[resnum] = new_name
+                                    break
+                    except Exception as e:
+                        print(f"Warning: Could not read {filename}: {e}")
+                        continue 
         # Read residues to exclude from part_QM.pdb
         exclude_residues = set()
         with open(part_qm_pdb, 'r') as qm_file:
@@ -683,16 +717,17 @@ def extract_qm_charges(ref_pdb, mol2_file, residue_name_mapping=None):
         # First, identify all PDB files to process
         pdb_files = []
          
-        # Add part_QM.pdb first (for non-standard residues)
+        # Add part_QM.pdb first (for non-standard residues) - with XYZ file
         if os.path.exists("part_QM.pdb"):
-            pdb_files.append(("part_QM.pdb", "charge_qm.dat"))
+            pdb_files.append(("part_QM.pdb", "charge_qm.dat", "qm.xyz", True))
         
-        # Add all renamed standard residue PDB files
+        # Add all renamed standard residue PDB files - WITHOUT XYZ files
         for key, new_name in residue_name_mapping.items():
             pdb_filename = f"{new_name}.pdb"
             if os.path.exists(pdb_filename):
                 charge_filename = f"charge_{new_name}.dat"
-                pdb_files.append((pdb_filename, charge_filename))
+                pdb_files.append((pdb_filename, charge_filename, None, False))
+        
         # Open charges_all.dat for writing the mapping
         with open("charges_all.dat", 'w') as charges_all_file:
             # First, handle part_QM.pdb for non-standard residues
@@ -704,11 +739,15 @@ def extract_qm_charges(ref_pdb, mol2_file, residue_name_mapping=None):
                 pdb_filename = f"{new_name}.pdb"
                 if os.path.exists(pdb_filename):
                     charges_all_file.write(f"{new_name}.mol2 charge_{new_name}.dat\n")
+        
         # Process each PDB file
-        for pdb_file, charge_output in pdb_files:
+        for pdb_info in pdb_files:
+            pdb_file, charge_output, xyz_output, create_xyz = pdb_info
+            
             # Read atom IDs and residue information from PDB
             qm_atom_ids = []
             atom_residue_mapping = {}
+            
             with open(pdb_file, 'r') as pdb:
                 for line in pdb:
                     if line.startswith(("ATOM", "HETATM")):
@@ -728,9 +767,11 @@ def extract_qm_charges(ref_pdb, mol2_file, residue_name_mapping=None):
                             print(f"Warning: Could not parse atom ID from PDB line: {line.strip()}")
                             continue
             
-            # Read charges and atom types from MOL2 file
+            # Read charges, atom types, atom names, and coordinates from MOL2 file
             charges_and_types = {}
+            atom_data = {}
             is_atom_section = False
+            
             with open(mol2_file, 'r') as mol2:
                 for line in mol2:
                     if "@<TRIPOS>ATOM" in line:
@@ -745,11 +786,26 @@ def extract_qm_charges(ref_pdb, mol2_file, residue_name_mapping=None):
                             parts = line.split()
                             atom_id = int(parts[0])
                             if atom_id in qm_atom_ids:
+                                atom_name = parts[1]
+                                x = float(parts[2])
+                                y = float(parts[3])
+                                z = float(parts[4])
+                                atom_type = parts[5]
                                 charge = float(parts[-1])
-                                atom_type = parts[5]  # Extract atom type from column 6
+                                
                                 charges_and_types[atom_id] = {
                                     'charge': charge, 
                                     'atom_type': atom_type
+                                }
+                                
+                                # Extract element by removing numbers from atom name
+                                element = ''.join([c for c in atom_name if not c.isdigit()])
+                                
+                                atom_data[atom_id] = {
+                                    'element': element,
+                                    'x': x,
+                                    'y': y,
+                                    'z': z
                                 }
                         except (ValueError, IndexError) as e:
                             print(f"Warning: Could not parse MOL2 line: {line.strip()}")
@@ -763,11 +819,26 @@ def extract_qm_charges(ref_pdb, mol2_file, residue_name_mapping=None):
                         charge_file.write(f"{data['charge']:.6f} {data['atom_type']}\n")
                     else:
                         print(f"Warning: No charge found for atom ID {atom_id}")
+            
+            # Write XYZ coordinate file only for QM residue
+            if create_xyz and xyz_output:
+                with open(xyz_output, 'w') as xyz_file:
+                    # Line 1: number of atoms
+                    xyz_file.write(f"{len(qm_atom_ids)}\n")
+                    # Line 2: blank line
+                    xyz_file.write("\n")
+                    # Lines 3+: element name (without numbers) and xyz coordinates
+                    for atom_id in qm_atom_ids:
+                        if atom_id in atom_data:
+                            data = atom_data[atom_id]
+                            xyz_file.write(f"{data['element']:2s} {data['x']:12.6f} {data['y']:12.6f} {data['z']:12.6f}\n")
+                        else:
+                            print(f"Warning: No coordinate data found for atom ID {atom_id}")
                  
     except Exception as e:
         print(f"Error extracting charges: {e}")
         raise
-    
+
 #Generate easyPARM_residues.dat file containing information about renamed standard residues.
 #Format: standard_residue.pdb standard_residue.mol2 standard_residue_name
 #Only includes residues that were originally standard residues (like HID, CYS, etc.)

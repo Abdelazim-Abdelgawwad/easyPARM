@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
+#                              |  $$$$$$/              Ver. 4.15 - 17 October 2025                                #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -50,7 +50,7 @@ def parse_gau(filename):
             hessian_lines.append(line.strip())
         
         # Parse coordinates
-        if "Input orientation:" in line:
+        if "Input orientation:" in line or "Z-Matrix orientation" in line:
             start_parsing_coords = True
             coord_line_counter = 0
             coord_lines = []

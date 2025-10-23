@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
+#                              |  $$$$$$/              Ver. 4.15 - 17 October 2025                                #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -17,6 +17,9 @@
 #Distributed under the GNU LESSER GENERAL PUBLIC LICENSE Version 2.1, February 1999                               #
 #Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es         #
 ###################################################################################################################
+
+import glob
+import os
 
 # Function to read metal numbers from a file
 def read_metal_numbers(file_path):
@@ -68,13 +71,16 @@ used_atom_types = set()
 # Create a master list of all available counters for fallback
 all_available_counters = list('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
-# Function to read existing atom types from the mol2 file
+
+# Function to read existing atom types from the mol2 file and all .frcmod files
 def read_existing_atom_types(mol2_file):
     existing_types = set()
+    
+    # Read atom types from mol2 file
     with open(mol2_file, 'r') as file:
         lines = file.readlines()
     
-    # Find the atom section
+    # Find the atom section in mol2
     try:
         atom_start = lines.index("@<TRIPOS>ATOM\n")
         bond_start = lines.index("@<TRIPOS>BOND\n")
@@ -89,6 +95,36 @@ def read_existing_atom_types(mol2_file):
     except ValueError:
         # Handle case where the file format is unexpected
         print("Warning: Could not parse mol2 file sections properly")
+    
+    # Read atom types from all .frcmod files (COMPLEX_*.frcmod)
+    frcmod_files = glob.glob("COMPLEX_*.frcmod")
+    
+    for frcmod_file in frcmod_files:
+        if os.path.exists(frcmod_file):
+            try:
+                with open(frcmod_file, 'r') as file:
+                    frcmod_lines = file.readlines()
+                
+                # Find MASS and BOND sections
+                mass_found = False
+                for i, line in enumerate(frcmod_lines):
+                    if line.strip().startswith("MASS"):
+                        mass_found = True
+                        continue
+                    
+                    # Stop reading when we reach BOND section
+                    if line.strip().startswith("BOND"):
+                        break
+                    
+                    # Read atom types between MASS and BOND
+                    if mass_found and line.strip():
+                        parts = line.split()
+                        if len(parts) >= 1:
+                            atom_type = parts[0]
+                            existing_types.add(atom_type)
+                            
+            except Exception as e:
+                print(f"Warning: Could not parse {frcmod_file}: {e}")
     
     return existing_types
 

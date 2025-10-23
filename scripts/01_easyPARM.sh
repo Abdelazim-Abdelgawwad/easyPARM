@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.10 - 20 September 2025                              #
+#                              |  $$$$$$/              Ver. 4.15 - 17 October 2025                                #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -276,7 +276,6 @@ run_antechamber_gaussian() {
         # First antechamber attempt
         antechamber -i "$RUN_DIR/$charge_data" -fi "$input_form" -o "$RUN_DIR/COMPLEX.mol2" -fo mol2 -c "$method" -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -j 5 -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1 
         
-
 	if [[ "$atom_type" -eq 2 || "$atom_type" -eq 3 ]]; then
 		
 		python3 "$SCRIPT_DIR/03_correct_mol2.py" "$RUN_DIR"
@@ -628,7 +627,7 @@ run_antechamber_psi4() {
             fi
 	    antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/ONE2.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
 	    if [ -f "$RUN_DIR/ONE2.mol2" ]; then
-                    cp "$RUN_DIR/ONE2.mol2" "$RUN_DIR/COMPLEX.mol2"
+		    cp "$RUN_DIR/ONE2.mol2" "$RUN_DIR/COMPLEX.mol2"
             fi
         fi
     else 
@@ -672,9 +671,9 @@ get_user_input
 
 # Ask the user for the input file
 echo " "
-echo "================================="
-echo "  Input Format Selection Menu "
-echo "================================="
+echo "==========================================="
+echo "  Frequencies Format Selection Menu "
+echo "==========================================="
 echo "Please select the format you will provide:"
 echo "1- Orca Output"
 echo "2- Gaussian Output"
@@ -730,7 +729,9 @@ case $qm_output in
             python3 "$SCRIPT_DIR/Seminario_method_ORCA.py" "$RUN_DIR/$orca_hessian" "$RUN_DIR/$charge_data" > "$RUN_DIR/temp.dat"
 	    if [ $? -ne 0 ]; then
 		    echo "Failed to execute Seminario_method_ORCA.py. Exiting."
-		    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+		    echo -e "\n\033Please verify the following:\033[0m"
+		    echo -e "  1. Check if the calculation terminated correctly"
+		    echo -e "  2. Verify frequency calculation completed separately"
 
 		    exit 1
 	    fi
@@ -741,7 +742,7 @@ case $qm_output in
         echo "You've selected Gaussian output"
         while true; do
             echo " "
-            read -p "Please provide the Gaussian output file (.log or .out): " gaussian_output
+            read -p "Please provide the Gaussian frequency calculation output file (.log or .out): " gaussian_output
             if [ ! -f "$RUN_DIR/$gaussian_output" ]; then
                 echo "Gaussian output file not found in $RUN_DIR. Please check the file name and try again."
                 continue
@@ -752,7 +753,11 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_GAUSSIAN.py" "$RUN_DIR/$gaussian_output" 2 > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_GAUSSIAN.py. Exiting."
-	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+	    echo -e "\n\033Please verify the following:\033[0m"
+	    echo -e "  1. Check if the calculation terminated correctly"
+	    echo -e "  2. Verify frequency calculation completed separately"
+	    echo -e "     → Ensure freq=noraman or freq job finished successfully"
+	    echo -e "  3. Verify the iop(7/33=1) was included in the input"
             exit 1
         fi
         ;;
@@ -804,7 +809,11 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_GAUSSIAN.py" "$RUN_DIR/complex.fchk" 3 > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_GAUSSIAN.py. Exiting."
-	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+	    echo -e "\n\033Please verify the following:\033[0m"
+	    echo -e "  1. Check if the calculation terminated correctly"
+	    echo -e "  2. Verify frequency calculation completed separately"
+	    echo -e "     → Ensure freq=noraman or freq job finished successfully"
+	    echo -e "  3. Chk was generated only by Gaussian"
             exit 1
         fi
         ;;
@@ -831,7 +840,11 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_GAUSSIAN.py" "$RUN_DIR/complex.fchk" 4 > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_GAUSSIAN.py. Exiting."
-	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+	    echo -e "\n\033Please verify the following:\033[0m"
+	    echo -e "  1. Check if the calculation terminated correctly"
+	    echo -e "  2. Verify frequency calculation completed separately"
+	    echo -e "     → Ensure freq=noraman or freq job finished successfully"
+	    echo -e "  3. fchk was generated by formchk tool from gaussian"
             exit 1
         fi
         ;;
@@ -851,7 +864,9 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_GAMESS.py" "$RUN_DIR/$gamess_output" > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_GAMESS.py. Exiting."
-	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+	    echo -e "\n\033Please verify the following:\033[0m"
+	    echo -e "  1. Check if the calculation terminated correctly"
+	    echo -e "  2. Verify frequency calculation completed separately"
             exit 1
         fi
         ;;
@@ -862,7 +877,7 @@ case $qm_output in
         python3 "$SCRIPT_DIR/Seminario_method_PSI4.py" "$RUN_DIR/hessian.txt" "$RUN_DIR/optimized.xyz" "$RUN_DIR/resp_charges.dat" > "$RUN_DIR/temp.dat"
         if [ $? -ne 0 ]; then
             echo "Failed to execute Seminario_method_PSI4.py. Exiting."
-	    echo -e "\n\033[0;31mPlease check the output.\033[0m"
+	    echo -e "\n\033[0;31mPlease check the output message.\033[0m"
             exit 1
         fi
         ;;
@@ -903,10 +918,14 @@ fi
 # Correct the .mol2 file
 # Generate a .frcmod file
 # Assign new atom types in the .mol2 and .frcmod file
-for script in 03_correct_mol2.py 04_parmch2_frcmod.sh; do
+for script in 03_correct_mol2.py correct_atom_type.py 04_parmch2_frcmod.sh; do
     if [[ $script == *.py ]]; then
         if [ -f "$SCRIPT_DIR/$script" ]; then
             python3 "$SCRIPT_DIR/$script" "$RUN_DIR"
+	    if [  -f "$RUN_DIR/COMPLEX_modified_atom_type.mol2" ]; then
+		    mv "$RUN_DIR/COMPLEX_modified_atom_type.mol2" "$RUN_DIR/COMPLEX.mol2"
+	    fi
+
             if [ $? -ne 0 ]; then
                 echo "Failed to execute $script. Exiting."
                 exit 1
@@ -1023,7 +1042,9 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
     fi
    
     python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/part_QM.xyz" "$RUN_DIR/part_QM.pdb"
-    antechamber -i "$RUN_DIR/part_QM.pdb" -fi pdb -o "$RUN_DIR/QM.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
+    python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/qm.xyz" "$RUN_DIR/qm.pdb"
+
+    antechamber -i "$RUN_DIR/qm.pdb" -fi pdb -o "$RUN_DIR/QM.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
   
     sed -i'' '$d' "$RUN_DIR/nonstand.pdb"
     cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/nonstand.pdb"
@@ -1046,7 +1067,7 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
      
     python3 "$SCRIPT_DIR/update_metalloprotein_charge.py" 
     cp "$RUN_DIR/QM.mol2" "$RUN_DIR/COMPLEX.mol2"
-    python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/part_QM.xyz"
+    python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/qm.xyz"
     python3 "$SCRIPT_DIR/03_correct_mol2.py" 
     mv "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/QM.mol2"
     mv "$RUN_DIR/1COMPLEX.mol2" "$RUN_DIR/COMPLEX.mol2"
@@ -1275,6 +1296,37 @@ for file in "${files_to_remove[@]}"; do
 	
     fi
 done
+
+# Function to check and report low force constants
+check_force_constants() {
+    local frcmod_file="$1"
+    local low_constants=$(awk '
+    /^BOND/,/^ANGLE/ {
+        if ($2 ~ /[0-9]/ && $2 < 20) {
+            print $1 " has force constant " $2
+        }
+    }' "$frcmod_file")
+    
+    if [ -n "$low_constants" ]; then
+        echo "========================================================================="
+        echo -e "\n\033[0;31mAbnormally low bond force constants detected!\033[0m"
+        echo "========================================================================="
+        echo "$low_constants"
+        echo -e "\n\033[0;31mThis indicates severely stretched bonds in your structure.\033[0m"
+        echo -e "\n\033[0;31mCheck your geometry optimization and level of theory before proceeding.\033[0m"
+        echo "========================================================================="
+        echo ""
+    fi
+}
+
+# Main logic
+if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
+    frcmod_file="$RUN_DIR/COMPLEX_${resid_name}.frcmod"
+else
+    frcmod_file="$RUN_DIR/COMPLEX.frcmod"
+fi
+
+check_force_constants "$frcmod_file"
 
 # Ask if the user wants to restrain the charge on specific atoms
 echo "  "
@@ -1615,7 +1667,7 @@ else
 
 fi
 
-files_to_remove=( "similar.dat" "input_library.tleap" "distance_type.dat" "tempz.fchk" "atomic_number.dat" "charges.dat"  "bond_angle_dihedral_data.dat" "forcefield.dat" "ONE2.mol2" "psi4.config" "charges.chg")
+files_to_remove=( "similar.dat" "input_library.tleap" "distance_type.dat" "tempz.fchk" "atomic_number.dat" "charges.dat"  "bond_angle_dihedral_data.dat" "forcefield.dat" "ONE2.mol2" "psi4.config" "charges.chg" "qm.pdb" "qm.xyz")
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
