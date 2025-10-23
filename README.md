@@ -1,8 +1,14 @@
-# 🚀 easyPARM v4.10 Released! 🎉
+# 🚀 easyPARM v4.15 Released! 🎉
 
-We’re excited to announce **easyPARM v4.10**, a major release packed with **critical enhancements**, **new quantum chemistry support**, and **better force field integration**!
+We’re excited to announce the release of **easyPARM v4.15**, featuring several **bug fixes**, **user-focused debugging improvements**, and an **expanded tutorial section**!
 
-## 🔥 NEW in v4.10
+## 🛠️ Bug Fixes & Improvements
+- Fixed issues related to **Gaussian** and **ORCA** output parsing.  
+- Resolved problems affecting specific **atom types**.  
+- Improved **debug messages** for clearer error reporting to users.  
+- Added a **new tutorial** dedicated to **metalloprotein parameterization**.
+
+## 🔥 Previoulsy in v4.10
 
 🧪 **Psi4 Integration**
 easyPARM now supports the **[Psi4](https://psicode.org/psi4manual/master/index.html)** open-source quantum chemistry package.
