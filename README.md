@@ -82,7 +82,7 @@ If you use **easyPARM** in your research, please cite:
 
 > Abdelazim M. A. Abdelgawwad and Antonio Francés-Monerris.
 > *easyPARM: Automated, Versatile, and Reliable Force Field Parameters for Metal-Containing Molecules with Unique Labeling of Coordinating Atoms.*
-> *J. Chem. Theory Comput. 2025, 21, 4, 1817–1830
+> *J. Chem. Theory Comput. 2025, 21, 4, 1817–1830*
 > [DOI: 10.1021/acs.jctc.4c01272](https://doi.org/10.1021/acs.jctc.4c01272)
 
 ---
