@@ -17,6 +17,7 @@ easyPARM now **fully supports metal–nucleic acid systems**, enabling robust pa
 
 Users can now explicitly select the force field for **metal-coordinated standard nucleotides**, including:
 
+* **OL15**
 * **OL21**
 * **OL24**
 * **BSC0**
