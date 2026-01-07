@@ -22,6 +22,7 @@ import numpy as np
 from collections import defaultdict
 import sys
 import periodictable
+from functools import lru_cache
 
 # function for gaussian input
 def parse_gau(filename):
@@ -331,12 +332,11 @@ def analyze_molecular_connectivity(coordinates, atomic_numbers, atom_names):
     bohr_to_angstrom = 0.529177
     natom = len(atomic_numbers)
     
-    # Calculate distance matrix
-    distance_matrix = np.zeros((natom, natom))
-    for i in range(natom):
-        for j in range(natom):
-            if i != j:
-                distance_matrix[i][j] = np.linalg.norm(coordinates[i] - coordinates[j]) * bohr_to_angstrom
+    # Vectorized distance calculation using broadcasting
+    coords_expanded_i = coordinates[:, np.newaxis, :]
+    coords_expanded_j = coordinates[np.newaxis, :, :]
+    distance_matrix = np.linalg.norm(coords_expanded_i - coords_expanded_j, axis=2) * bohr_to_angstrom
+    np.fill_diagonal(distance_matrix, 0)  # Ensure diagonal is 0
     
     # Define typical bond lengths for connectivity (in Angstroms)
     bond_cutoffs = {
@@ -378,30 +378,33 @@ def analyze_molecular_connectivity(coordinates, atomic_numbers, atom_names):
             pair2 = (elem2_symbol, elem1_symbol)
             return bond_cutoffs.get(pair1, bond_cutoffs.get(pair2, 1.8))
     
-    # Build connectivity matrix
-    connectivity = np.zeros((natom, natom), dtype=bool)
+    # Pre-compute cutoff matrix
+    cutoff_matrix = np.zeros((natom, natom))
     for i in range(natom):
         for j in range(i+1, natom):
-            elem_i = atomic_numbers[i]
-            elem_j = atomic_numbers[j]
-            cutoff = get_cutoff(elem_i, elem_j)
-            
-            if distance_matrix[i][j] <= cutoff:
-                connectivity[i][j] = True
-                connectivity[j][i] = True
+            cutoff = get_cutoff(atomic_numbers[i], atomic_numbers[j])
+            cutoff_matrix[i, j] = cutoff
+            cutoff_matrix[j, i] = cutoff
+    
+    # Vectorized connectivity determination
+    connectivity = distance_matrix <= cutoff_matrix
+    np.fill_diagonal(connectivity, False)
     
     # Create neighbor lists
-    neighbors = {}
-    for i in range(natom):
-        neighbors[i] = []
-        for j in range(natom):
-            if connectivity[i][j]:
-                neighbors[i].append(j)
+    neighbors = {i: np.where(connectivity[i])[0].tolist() for i in range(natom)}
     
     return connectivity, neighbors, distance_matrix
 
 #Create a detailed chemical fingerprint for an atom based on its environment
-def get_chemical_environment_fingerprint(atomic_numbers, atom_idx, neighbors, max_depth=3):
+def get_chemical_environment_fingerprint(atomic_numbers, atom_idx, neighbors, max_depth=3, _cache=None):
+    
+    # Use memoization to avoid redundant calculations
+    if _cache is None:
+        _cache = {}
+    
+    cache_key = (atom_idx, max_depth)
+    if cache_key in _cache:
+        return _cache[cache_key]
     
     def explore_environment(current_atom, depth, visited, path):
         if depth > max_depth:
@@ -433,8 +436,9 @@ def get_chemical_environment_fingerprint(atomic_numbers, atom_idx, neighbors, ma
         return environment_info
     
     # Start exploration from the atom
-    fingerprint = explore_environment(atom_idx, 0, set(), [periodictable.elements[atomic_numbers[atom_idx]].symbol.upper()])
-    return tuple(sorted(fingerprint))
+    fingerprint = tuple(sorted(explore_environment(atom_idx, 0, set(), [periodictable.elements[atomic_numbers[atom_idx]].symbol.upper()])))
+    _cache[cache_key] = fingerprint
+    return fingerprint
 
 #Identify aromatic rings in the molecule using simple ring detection
 def identify_aromatic_rings(atomic_numbers, connectivity, neighbors):
@@ -442,13 +446,17 @@ def identify_aromatic_rings(atomic_numbers, connectivity, neighbors):
     natom = len(atomic_numbers)
     aromatic_atoms = set()
     
-    # Find rings using DFS
+    # Use iterative approach with visited tracking to avoid redundant searches
     def find_rings_from_atom(start_atom, max_ring_size=8):
-        def dfs(current, path, visited_edges):
-            if len(path) > max_ring_size:
-                return []
+        stack = [(start_atom, [start_atom], set())]
+        rings_found = []
+        
+        while stack:
+            current, path, visited_edges = stack.pop()
             
-            rings_found = []
+            if len(path) > max_ring_size:
+                continue
+            
             for neighbor in neighbors[current]:
                 edge = tuple(sorted([current, neighbor]))
                 
@@ -458,11 +466,9 @@ def identify_aromatic_rings(atomic_numbers, connectivity, neighbors):
                 elif neighbor not in path and edge not in visited_edges:
                     new_visited = visited_edges.copy()
                     new_visited.add(edge)
-                    rings_found.extend(dfs(neighbor, path + [neighbor], new_visited))
-            
-            return rings_found
+                    stack.append((neighbor, path + [neighbor], new_visited))
         
-        return dfs(start_atom, [start_atom], set())
+        return rings_found
     
     # Find all rings
     all_rings = []
@@ -510,20 +516,17 @@ def analyze_carbon_hybridization(atomic_numbers, carbon_idx, neighbors):
     else:
         return 'unknown'
 
-#Enhanced hydrogen environment analysis
-def analyze_enhanced_hydrogen_environments(atomic_numbers, neighbors, connectivity):
+#Enhanced hydrogen environment analysis 
+def analyze_enhanced_hydrogen_environments(atomic_numbers, neighbors, connectivity, aromatic_atoms):
     natom = len(atomic_numbers)
-    
-    # First identify aromatic rings
-    aromatic_atoms = identify_aromatic_rings(atomic_numbers, connectivity, neighbors)
     
     # Categorize hydrogens with detailed environment analysis
     hydrogen_environments = {}
     
-    for i in range(natom):
-        if periodictable.elements[atomic_numbers[i]].symbol.upper() != 'H':
-            continue
-        
+    # Pre-filter hydrogen atoms
+    hydrogen_indices = [i for i in range(natom) if periodictable.elements[atomic_numbers[i]].symbol.upper() == 'H']
+    
+    for i in hydrogen_indices:
         # Get the heavy atom this H is bonded to
         heavy_neighbors = []
         for neighbor_idx in neighbors[i]:
@@ -536,9 +539,6 @@ def analyze_enhanced_hydrogen_environments(atomic_numbers, neighbors, connectivi
             
         heavy_atom_idx, heavy_element = heavy_neighbors[0]
         
-        # Create detailed environment fingerprint
-        env_fingerprint = get_chemical_environment_fingerprint(atomic_numbers, i, neighbors, max_depth=3)
-        
         # Analyze specific environments
         if heavy_element == 'C':
             carbon_hybridization = analyze_carbon_hybridization(atomic_numbers, heavy_atom_idx, neighbors)
@@ -546,61 +546,58 @@ def analyze_enhanced_hydrogen_environments(atomic_numbers, neighbors, connectivi
             
             # Get carbon's neighbors (excluding this hydrogen)
             carbon_neighbors = [n for n in neighbors[heavy_atom_idx] if n != i]
-            carbon_neighbor_elements = [periodictable.elements[atomic_numbers[n]].symbol.upper() for n in carbon_neighbors]
+            carbon_neighbor_elements = tuple(sorted([periodictable.elements[atomic_numbers[n]].symbol.upper() for n in carbon_neighbors]))
             
             # Count different types of neighbors
             h_on_carbon = carbon_neighbor_elements.count('H')
             c_on_carbon = carbon_neighbor_elements.count('C')
-            n_on_carbon = carbon_neighbor_elements.count('N')
-            o_on_carbon = carbon_neighbor_elements.count('O')
-            s_on_carbon = carbon_neighbor_elements.count('S')
             
             # Create detailed environment key
             if is_aromatic_carbon:
-                env_key = f"aromatic_H_{carbon_hybridization}_{tuple(sorted(carbon_neighbor_elements))}"
+                env_key = f"aromatic_H_{carbon_hybridization}_{carbon_neighbor_elements}"
             else:
                 # Aliphatic carbon - be more specific about environment
                 if h_on_carbon == 2 and c_on_carbon == 1:
                     # Check what the carbon neighbor is connected to
                     carbon_neighbor_idx = [n for n in carbon_neighbors if periodictable.elements[atomic_numbers[n]].symbol.upper() == 'C'][0]
-                    carbon_neighbor_neighbors = [periodictable.elements[atomic_numbers[n]].symbol.upper() for n in neighbors[carbon_neighbor_idx]]
-                    env_key = f"methyl_H_connected_to_C_with_{tuple(sorted(carbon_neighbor_neighbors))}"
+                    carbon_neighbor_neighbors = tuple(sorted([periodictable.elements[atomic_numbers[n]].symbol.upper() for n in neighbors[carbon_neighbor_idx]]))
+                    env_key = f"methyl_H_connected_to_C_with_{carbon_neighbor_neighbors}"
                 elif h_on_carbon == 1 and c_on_carbon == 2:
                     # Methylene - check what carbons are connected to
                     carbon_neighbor_envs = []
                     for cn_idx in [n for n in carbon_neighbors if periodictable.elements[atomic_numbers[n]].symbol.upper() == 'C']:
-                        cn_neighbors = [periodictable.elements[atomic_numbers[n]].symbol.upper() for n in neighbors[cn_idx]]
-                        carbon_neighbor_envs.append(tuple(sorted(cn_neighbors)))
+                        cn_neighbors = tuple(sorted([periodictable.elements[atomic_numbers[n]].symbol.upper() for n in neighbors[cn_idx]]))
+                        carbon_neighbor_envs.append(cn_neighbors)
                     env_key = f"methylene_H_{tuple(sorted(carbon_neighbor_envs))}"
                 elif h_on_carbon == 0:
                     # Tertiary or quaternary carbon
-                    env_key = f"tertiary_H_{tuple(sorted(carbon_neighbor_elements))}"
+                    env_key = f"tertiary_H_{carbon_neighbor_elements}"
                 else:
                     # General case
-                    env_key = f"aliphatic_H_{carbon_hybridization}_{tuple(sorted(carbon_neighbor_elements))}"
+                    env_key = f"aliphatic_H_{carbon_hybridization}_{carbon_neighbor_elements}"
                     
         elif heavy_element == 'N':
             # Nitrogen-bonded hydrogens
             nitrogen_neighbors = [n for n in neighbors[heavy_atom_idx] if n != i]
-            nitrogen_neighbor_elements = [periodictable.elements[atomic_numbers[n]].symbol.upper() for n in nitrogen_neighbors]
+            nitrogen_neighbor_elements = tuple(sorted([periodictable.elements[atomic_numbers[n]].symbol.upper() for n in nitrogen_neighbors]))
             is_aromatic_nitrogen = heavy_atom_idx in aromatic_atoms
             
             if is_aromatic_nitrogen:
-                env_key = f"aromatic_NH_{tuple(sorted(nitrogen_neighbor_elements))}"
+                env_key = f"aromatic_NH_{nitrogen_neighbor_elements}"
             else:
-                env_key = f"amine_H_{tuple(sorted(nitrogen_neighbor_elements))}"
+                env_key = f"amine_H_{nitrogen_neighbor_elements}"
                 
         elif heavy_element == 'O':
             # Oxygen-bonded hydrogens
             oxygen_neighbors = [n for n in neighbors[heavy_atom_idx] if n != i]
-            oxygen_neighbor_elements = [periodictable.elements[atomic_numbers[n]].symbol.upper() for n in oxygen_neighbors]
-            env_key = f"hydroxyl_H_{tuple(sorted(oxygen_neighbor_elements))}"
+            oxygen_neighbor_elements = tuple(sorted([periodictable.elements[atomic_numbers[n]].symbol.upper() for n in oxygen_neighbors]))
+            env_key = f"hydroxyl_H_{oxygen_neighbor_elements}"
             
         elif heavy_element == 'S':
             # Sulfur-bonded hydrogens
             sulfur_neighbors = [n for n in neighbors[heavy_atom_idx] if n != i]
-            sulfur_neighbor_elements = [periodictable.elements[atomic_numbers[n]].symbol.upper() for n in sulfur_neighbors]
-            env_key = f"thiol_H_{tuple(sorted(sulfur_neighbor_elements))}"
+            sulfur_neighbor_elements = tuple(sorted([periodictable.elements[atomic_numbers[n]].symbol.upper() for n in sulfur_neighbors]))
+            env_key = f"thiol_H_{sulfur_neighbor_elements}"
             
         else:
             # Other heavy atoms
@@ -633,13 +630,17 @@ def identify_equivalent_atoms_enhanced(coordinates, atomic_numbers, atom_names):
     equivalent_groups = []
     processed = set()
     
+    # Pre-identify aromatic atoms once
+    aromatic_atoms = identify_aromatic_rings(atomic_numbers, connectivity, neighbors)
+    
     # Group atoms by element first
-    elements_dict = {}
+    elements_dict = defaultdict(list)
     for i in range(natom):
         element = periodictable.elements[atomic_numbers[i]].symbol.upper()
-        if element not in elements_dict:
-            elements_dict[element] = []
         elements_dict[element].append(i)
+    
+    # Use shared cache for fingerprint calculations
+    fingerprint_cache = {}
     
     # For each element, find truly equivalent atoms
     for element, atom_indices in elements_dict.items():
@@ -647,15 +648,12 @@ def identify_equivalent_atoms_enhanced(coordinates, atomic_numbers, atom_names):
             continue
             
         # Create environment fingerprints for all atoms of this element
-        fingerprints = {}
+        fingerprints = defaultdict(list)
         for atom_idx in atom_indices:
             if atom_idx in processed:
                 continue
                 
-            fingerprint = get_chemical_environment_fingerprint(atomic_numbers, atom_idx, neighbors, max_depth=3)
-            
-            if fingerprint not in fingerprints:
-                fingerprints[fingerprint] = []
+            fingerprint = get_chemical_environment_fingerprint(atomic_numbers, atom_idx, neighbors, max_depth=3, _cache=fingerprint_cache)
             fingerprints[fingerprint].append(atom_idx)
         
         # Create equivalent groups for atoms with identical fingerprints
@@ -664,8 +662,8 @@ def identify_equivalent_atoms_enhanced(coordinates, atomic_numbers, atom_names):
                 equivalent_groups.append(equivalent_atoms)
                 processed.update(equivalent_atoms)
                 
-    # Also analyze hydrogen environments specifically
-    hydrogen_groups = analyze_enhanced_hydrogen_environments(atomic_numbers, neighbors, connectivity)
+    # Also analyze hydrogen environments specifically - pass pre-computed aromatic_atoms
+    hydrogen_groups = analyze_enhanced_hydrogen_environments(atomic_numbers, neighbors, connectivity, aromatic_atoms)
     for h_group in hydrogen_groups:
         equivalent_groups.append(h_group['indices'])
     
@@ -741,3 +739,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     main(input_file, file_type)
+

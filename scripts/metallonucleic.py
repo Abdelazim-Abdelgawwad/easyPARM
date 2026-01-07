@@ -19,9 +19,9 @@
 ###################################################################################################################
 
 from Bio import PDB
+import sys
 import numpy as np
 import re
-import sys
 import shutil
 import os 
 
@@ -52,8 +52,8 @@ def extract_atom_types_from_mol2(file_path):
         print(f"Error reading {file_path}: {str(e)}")
         return {}
 
-#Read atom type mappings from library file
-def read_aminofb15_lib(file_path):
+#Read nucleic acid atom type mappings from library file
+def read_parmBSC1_lib(file_path):
     residue_atom_types = {}
     current_residue = None
     
@@ -103,7 +103,7 @@ def write_pdb_with_mol2_types(structure, output_file, atom_types):
                         atom_counter += 1
 
 #Update atom types in QM.pdb based on REFQM.pdb and library
-def update_atom_types_from_library(qm_pdb, ref_pdb, lib_types, terminal_info):
+def update_atom_types_from_library(qm_pdb, ref_pdb, lib_types):
     with open(ref_pdb, 'r') as ref_file:
         ref_lines = ref_file.readlines()
     
@@ -113,33 +113,14 @@ def update_atom_types_from_library(qm_pdb, ref_pdb, lib_types, terminal_info):
         
         for qm_line, ref_line in zip(qm_lines, ref_lines):
             if qm_line.startswith(('ATOM', 'HETATM')):
+                # Get residue name and original atom name from reference PDB
                 ref_resname = ref_line[17:20].strip()
                 ref_atomname = ref_line[12:16].strip()
-                ref_chain = ref_line[21:22].strip()
                 
-                # Parse residue ID
-                try:
-                    hetero = ' '
-                    if ref_line.startswith('HETATM'):
-                        hetero = ref_line[17:20].strip()
-                    resnum = int(ref_line[22:26].strip())
-                    icode = ref_line[26:27].strip() if len(ref_line) > 26 else ' '
-                    ref_res_id = (hetero if hetero != ' ' else ' ', resnum, icode)
-                    
-                    # Check if this residue is a terminal
-                    res_key = (ref_chain, ref_res_id)
-                    if res_key in terminal_info:
-                        terminal_type = terminal_info[res_key]
-                        # Add N or C prefix for library lookup
-                        lookup_name = ('N' if terminal_type == 'NTERM' else 'C') + ref_resname
-                    else:
-                        lookup_name = ref_resname
-                except:
-                    lookup_name = ref_resname
-                
-                # Look up atom type in library using terminal-aware name
-                if lookup_name in lib_types and ref_atomname in lib_types[lookup_name]:
-                    new_type = lib_types[lookup_name][ref_atomname]
+                # Look up new atom type in library
+                if ref_resname in lib_types and ref_atomname in lib_types[ref_resname]:
+                    new_type = lib_types[ref_resname][ref_atomname]
+                    # Replace atom type in QM.pdb line (columns 13-16)
                     new_line = qm_line[:12] + f"{new_type:<3}" + qm_line[16:]
                     updated_lines.append(new_line)
                 else:
@@ -147,6 +128,7 @@ def update_atom_types_from_library(qm_pdb, ref_pdb, lib_types, terminal_info):
             else:
                 updated_lines.append(qm_line)
     
+    # Write updated QM.pdb
     with open(qm_pdb, 'w') as f:
         f.writelines(updated_lines)
 
@@ -215,50 +197,24 @@ def update_mol2_with_qm_types(mol2_file, qm_pdb, output_mol2):
     except Exception as e:
         print(f"Error updating MOL2 file: {e}")
 
-#Identify N-terminal and C-terminal residues for each chain.
-def identify_terminal_residues(structure, standard_residues):
-    
-    terminal_info = {}
-
-    # Base residue names (without N/C prefix)
-    base_residues = {res for res in standard_residues if not res.startswith(('N', 'C'))}
-
-    for model in structure:
-        for chain in model:
-            residues = [res for res in chain if res.get_resname() in base_residues]
-
-            if len(residues) == 0:
-                continue
-
-            # Mark first standard residue as N-terminal
-            first_res = residues[0]
-            terminal_info[(chain.id, first_res.get_id())] = 'NTERM'
-
-            # Mark last standard residue as C-terminal
-            last_res = residues[-1]
-            terminal_info[(chain.id, last_res.get_id())] = 'CTERM'
-
-    return terminal_info
-
-
-def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_file="amber_refernce.lib", 
+def analyze_and_extract_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_file="amber_parmBSC1.lib", 
                                    output_pdb="QM.pdb", distance_cutoff=2.5):
-    metals=['MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU', 'NA', 'K', 'LI', 'RB', 'CS', 'MG', 'CA', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI', 'LA', 'CE', 'PR', 'ND', 'PM', 'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU', 'FE2', 'FE3', 'FE4', 'CU1', 'CU2', 'MN2', 'MN3', 'MN4', 'CO2', 'CO3', 'NI2', 'NI3', 'V2', 'V3', 'V4', 'V5']    
-    # Define standard amino acid residues
+    metals=['MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU', 'NA', 'K', 'LI', 'RB', 'CS', 'MG', 'CA', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI', 'LA', 'CE', 'PR', 'ND', 'PM', 'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU', 'FE2', 'FE3', 'FE4', 'CU1', 'CU2', 'MN2', 'MN3', 'MN4', 'CO2', 'CO3', 'NI2', 'NI3', 'V2', 'V3', 'V4', 'V5', 'SE']    
+    # Define standard nucleic acid residues
     standard_residues = {
-        # Base residues
-        "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
-        "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
-        "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", "NHE", "NME",
-        "ACE",
-        # N-terminal variants
-        "NALA", "NARG", "NASH", "NASN", "NASP", "NCYM", "NCYS", "NCYX", "NGLH", "NGLN",
-        "NGLU", "NGLY", "NHID", "NHIE", "NHIP", "NHYP", "NILE", "NLEU", "NLYN", "NLYS",
-        "NMET", "NPHE", "NPRO", "NSER", "NTHR", "NTRP", "NTYR", "NVAL", "NHIS",
-        # C-terminal variants
-        "CALA", "CARG", "CASH", "CASN", "CASP", "CCYM", "CCYS", "CCYX", "CGLH", "CGLN",
-        "CGLU", "CGLY", "CHID", "CHIE", "CHIP", "CHYP", "CILE", "CLEU", "CLYN", "CLYS",
-        "CMET", "CPHE", "CPRO", "CSER", "CTHR", "CTRP", "CTYR", "CVAL", "CHIS"
+            # DNA
+            "DA", "DT", "DC", "DG", "DU",
+            # RNA
+            "A", "U", "C", "G",
+            # Additional AMBER nucleic acid residues
+            "RA", "RU", "RC", "RG",  # RNA
+            "DAN", "DTN", "DCN", "DGN",  # Deoxy forms
+            "A3", "A5", "AN", "C3", "C5", "CN",  # 3' and 5' terminal
+            "G3", "G5", "GN", "U3", "U5", "UN",
+            "DA3", "DA5", "DAN", "DC3", "DC5", "DCN",
+            "DG3", "DG5", "DGN", "DT3", "DT5", "DTN",
+            "OHE", "ADE", "GUA", "CYT", "THY", "URA",
+            "RA3", "RA5", "RU3", "RU5", "RG3", "RG5", "RC3", "RC5"
     }
 
     # Get the script paths
@@ -267,7 +223,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_
 
     # Initialize PDB parser
     parser = PDB.PDBParser(QUIET=True)
-    structure = parser.get_structure('protein', input_pdb)
+    structure = parser.get_structure('structure', input_pdb)
     
     # Dictionaries and sets to store results
     metal_coordination = {}
@@ -310,7 +266,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_
                                         metal_coordination[key]['coordinating_residues'].append(coord_info)
                                         residues_to_extract.add((chain2.id, residue2.get_id()))
     
-    # NEW SECTION: Find standard residues linked to non-standard coordinating residues
+    # Step 2: Find standard residues linked to non-standard coordinating residues
     # Collect all heavy atoms for neighbor search
     heavy_atoms = []
     non_standard_coordinating = set()
@@ -332,7 +288,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_
     
     # Create neighbor search for all heavy atoms
     ns = PDB.NeighborSearch(heavy_atoms)
-    bond_cutoff = 1.9  # Covalent bond distance cutoff in Å
+    bond_cutoff = 1.9  # Covalent bond distance cutoff in Ångstroms
     
     # Check for standard residues bonded to non-standard coordinating residues
     for res_key in non_standard_coordinating:
@@ -363,8 +319,8 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_
                         if nearby_res_key not in original_order:
                             original_order.append(nearby_res_key)
 
-    # Step 2: Rebuild structure, explicitly handling hydrogens
-    new_structure = PDB.Structure.Structure('metal_site')
+    # Step 3: Rebuild structure, explicitly handling hydrogens
+    new_structure = PDB.Structure.Structure('site')
     new_model = PDB.Model.Model(0)
     new_structure.add(new_model)
     new_chain = PDB.Chain.Chain('A')
@@ -385,17 +341,14 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_
                 new_residue.add(new_atom)
             new_chain.add(new_residue)
 
-    # Step 3: Save the new structure
+    # Step 4: Save the new structure
     ref_output = "REFQM.pdb"
     io = PDB.PDBIO()
     io.set_structure(new_structure)
     io.save(ref_output)
-    
-    # Identify terminals
-    terminal_info = identify_terminal_residues(new_structure, standard_residues)
 
-    # Step 4: Extract specific atoms and write to fixed_charges.dat
-    target_atoms = {'N', 'CA', 'C', 'O'}
+    # Step 5: Extract backbone atoms for nucleic acids (P, OP1, OP2, O5', O3') and write to fixed_charges.dat
+    target_atoms = {'P', 'OP1', 'OP2', "O5'", "O3'", "C5'" , "H5'" , "H5''" , "C4'" , "H4'" , "O4'" , "C3'" , "H3'" , "C2'" , "H2'" , "H2''", "HOP3", "OP3"}
     # Step 4.1 — read ref_output and store {atom_number: atom_name_ref}
     ref_atoms = {}
 
@@ -406,14 +359,14 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_
                 if atom_name in target_atoms:
                     atom_number = int(line[6:11].strip())
                     ref_atoms[atom_number] = atom_name
-    # Step 5: Process MOL2 and library files
+
+    # Step 6: Process MOL2 and library files
     mol2_atom_types = extract_atom_types_from_mol2(mol2_file)
     write_pdb_with_mol2_types(new_structure, output_pdb, mol2_atom_types)
 
-    lib_types = read_aminofb15_lib(lib_file_path)
-    update_atom_types_from_library(output_pdb, ref_output, lib_types, terminal_info)
-
-    # Step 5.1 — read output_pdb and match by atom_number
+    lib_types = read_parmBSC1_lib(lib_file_path)
+    update_atom_types_from_library(output_pdb, ref_output, lib_types)
+    # Step 5.2 — read output_pdb and match by atom_number
     with open(output_pdb, 'r') as out_file, open("fixed_charges.dat", 'w') as outfile:
         for line in out_file:
             if line.startswith("ATOM"):
@@ -421,13 +374,13 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file="NEW_COMPLEX.mol2", lib_
 
                 if atom_number in ref_atoms:
                     atom_name_out = line[12:16].strip()
-                    residue_name = line[16:20].strip()
+                    residue_name = line[17:20].strip()
                     atom_name_ref = ref_atoms[atom_number]
 
                     outfile.write(f"{atom_number} {atom_name_ref} {atom_name_out} {residue_name}\n")
-    
-    return metal_coordination, terminal_info
 
+
+    return metal_coordination
 
 #Extracts all residue names from the given PDB file.
 def get_existing_residues(pdb_file):
@@ -440,7 +393,6 @@ def get_existing_residues(pdb_file):
     return existing_residues
 
 #Generates a unique residue name based on base_name. Increments a counter until a unique name is found.
-
 def generate_unique_residue_name(base_name, existing_residues, residue_type_count):
     # Initialize counter if not already done
     if base_name not in residue_type_count:
@@ -453,14 +405,14 @@ def generate_unique_residue_name(base_name, existing_residues, residue_type_coun
 
         # Determine which pattern and digit to use
         if count <= 9:
-            # Pattern 1: CY1-CY9 (digit at position 2)
+            # Pattern 1: DA1-DA9 (digit at position 2)
             candidate = f"{base_name}{count}"
         elif count <= 18:
-            # Pattern 2: 1CY-9CY (digit at position 0)
+            # Pattern 2: 1DA-9DA (digit at position 0)
             digit = count - 9
             candidate = f"{digit}{base_name}"
         elif count <= 27:
-            # Pattern 3: C1Y-C9Y (digit at position 1)
+            # Pattern 3: D1A-D9A (digit at position 1)
             digit = count - 18
             candidate = f"{base_name[0]}{digit}{base_name[1]}"
         else:
@@ -481,88 +433,73 @@ def generate_unique_residue_name(base_name, existing_residues, residue_type_coun
             return candidate
         residue_type_count[base_name] += 1
 
-#Extract non-standard residues (including those standard residues near metals),
-#standard residues linked to non-standard residues, and generate QM PDB and XYZ files.
+#Extract non-standard residues and standard residues linked to non-standard residues
 def extract_non_standard_residues_from_ref(ref_pdb, output_pdb="part_QM.pdb", output_xyz="part_QM.xyz", 
-                                           standard_residues=None, all_residues_pdb="metalloprotein_easyPARM.pdb",
-                                           terminal_info=None):
+                                           standard_residues=None, all_residues_pdb="nucleic_acid_easyPARM.pdb"):
     
-    metals=['MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU', 'NA', 'K', 'LI', 'RB', 'CS', 'MG', 'CA', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI', 'LA', 'CE', 'PR', 'ND', 'PM', 'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU', 'FE2', 'FE3', 'FE4', 'CU1', 'CU2', 'MN2', 'MN3', 'MN4', 'CO2', 'CO3', 'NI2', 'NI3', 'V2', 'V3', 'V4', 'V5']
-
     element_converter = {
         'ZN': 'Zn', 'FE': 'Fe', 'CO': 'Co', 'RU': 'Ru', 'IR': 'Ir', 'PT': 'Pt', 'AU': 'Au', 'AG': 'Ag', 
         'CU': 'Cu', 'MG': 'Mg', 'MN': 'Mn', 'NI': 'Ni', 'PD': 'Pd', 'CD': 'Cd', 'HG': 'Hg', 'BR': 'Br',
         'CL': 'Cl', 'AL': 'Al', 'GA': 'Ga', 'IN': 'In', 'SB': 'Sb', 'TL': 'Tl', 'PB': 'Pb', 'BI': 'Bi',
         'AS': 'As', 'SE': 'Se', 'SR': 'Sr', 'MO': 'Mo', 'TC': 'Tc', 'RE': 'Re', 'OS': 'Os', 'RH': 'Rh', 
-        'NA': 'Na', 'BA': 'Ba', 'SI': 'Si'
+        'NA': 'Na', 'BA': 'Ba', 'SI': 'Si', 'K': 'K', 'CA': 'Ca'
     }
 
     if standard_residues is None:
         standard_residues = {
-            # Base residues
-            "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
-            "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
-            "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", "NHE", "NME",
-            "ACE",
-            # N-terminal variants
-            "NALA", "NARG", "NASH", "NASN", "NASP", "NCYM", "NCYS", "NCYX", "NGLH", "NGLN",
-            "NGLU", "NGLY", "NHID", "NHIE", "NHIP", "NHYP", "NILE", "NLEU", "NLYN", "NLYS",
-            "NMET", "NPHE", "NPRO", "NSER", "NTHR", "NTRP", "NTYR", "NVAL", 
-            # C-terminal variants
-            "CALA", "CARG", "CASH", "CASN", "CASP", "CCYM", "CCYS", "CCYX", "CGLH", "CGLN",
-            "CGLU", "CGLY", "CHID", "CHIE", "CHIP", "CHYP", "CILE", "CLEU", "CLYN", "CLYS",
-            "CMET", "CPHE", "CPRO", "CSER", "CTHR", "CTRP", "CTYR", "CVAL"
+            # DNA
+            "DA", "DT", "DC", "DG", "DU",
+            # RNA
+            "A", "U", "C", "G",
+            # Additional AMBER nucleic acid residues
+            "RA", "RU", "RC", "RG",  # RNA
+            "DAN", "DTN", "DCN", "DGN",  # Deoxy forms
+            "A3", "A5", "AN", "C3", "C5", "CN",  # 3' and 5' terminal
+            "G3", "G5", "GN", "U3", "U5", "UN",
+            "DA3", "DA5", "DAN", "DC3", "DC5", "DCN",
+            "DG3", "DG5", "DGN", "DT3", "DT5", "DTN",
+            "OHE", "ADE", "GUA", "CYT", "THY", "URA",
+            "RA3", "RA5", "RU3", "RU5", "RG3", "RG5", "RC3", "RC5"
         }
 
-    if terminal_info is None:
-        terminal_info = {}
     # Get complete set of residue names from the input PDB file
     existing_residues = get_existing_residues(all_residues_pdb)
 
     # Parse structure for structural analysis
     parser = PDB.PDBParser(QUIET=True)
     try:
-        structure = parser.get_structure('protein', ref_pdb)
+        structure = parser.get_structure('structure', ref_pdb)
     except Exception as e:
         print(f"Error parsing PDB file {ref_pdb}: {e}")
         raise
 
-    # Store metal coordinates
-    metal_coords = []
     # For standard residues that will be renamed
     standard_res_atoms = {}
-    # For non-standard residues (or standard ones not near metals)
+    # For non-standard residues
     nonstandard_res_atoms = []
     # Mapping from original residue identifier (tuple) to new name
     residue_name_mapping = {}
-    # Counter for each base name (e.g., "CY" or "HI")
+    # Counter for each base name
     residue_type_count = {}
     # Track residues to extract
     residues_to_extract = set()
     # Track non-standard residues for later bond checking
     non_standard_res_keys = set()
 
-    # First pass: collect metal coordinates and identify coordinating residues
+    # First pass: identify all residues and non-standard ones
     with open(ref_pdb, 'r') as f:
         for line in f:
             if line.startswith(("ATOM", "HETATM")):
-                element = line[76:78].strip()
                 resname = line[17:20].strip()
                 chain = line[21:22].strip()
                 resnum = int(line[22:26])
                 res_key = (resname, chain, resnum)
                 
+                residues_to_extract.add(res_key)
+                
                 # Track all non-standard residues
                 if resname not in standard_residues:
                     non_standard_res_keys.add(res_key)
-                
-                if element.upper() in metals:
-                    x = float(line[30:38])
-                    y = float(line[38:46])
-                    z = float(line[46:54])
-                    metal_coords.append(np.array([x, y, z]))
-                    # Get residue info for this metal
-                    residues_to_extract.add(res_key)
 
     # Build dictionary of heavy atoms for neighbor search
     heavy_atoms = []
@@ -582,47 +519,33 @@ def extract_non_standard_residues_from_ref(ref_pdb, output_pdb="part_QM.pdb", ou
                 if res_key not in residue_atoms:
                     residue_atoms[res_key] = []
                 
-                # Check if this residue is near a metal
+                # Collect heavy atoms
                 for atom in residue:
                     if atom.element != 'H':  # Only use heavy atoms
-                        # Add to heavy atoms list
                         heavy_atoms.append(atom)
-                        # Store atom in residue atoms list
                         residue_atoms[res_key].append(atom)
-                        # Map this atom to its residue
                         atom_residue_map[atom.get_full_id()] = res_key
-                        
-                        # Check proximity to metals
-                        coord = atom.get_coord()
-                        for metal_coord in metal_coords:
-                            if np.linalg.norm(metal_coord - coord) <= 2.5:
-                                residues_to_extract.add(res_key)
-                                break
 
     # Create neighbor search for all heavy atoms
     ns = PDB.NeighborSearch(heavy_atoms)
     bond_cutoff = 1.9  # Covalent bond distance cutoff
 
-    # Check for standard residues bonded to non-standard residues (not just those coordinating metals)
+    # Check for standard residues bonded to non-standard residues
     for ns_res_key in non_standard_res_keys:
-        if ns_res_key in residue_atoms:  # Make sure we have atoms for this residue
-            # Process each heavy atom in the non-standard residue
+        if ns_res_key in residue_atoms:
             for atom in residue_atoms[ns_res_key]:
-                # Find potential bonding partners
                 nearby_atoms = ns.search(atom.get_coord(), bond_cutoff, level='A')
                 
                 for nearby_atom in nearby_atoms:
-                    if nearby_atom != atom:  # Skip self
+                    if nearby_atom != atom:
                         nearby_atom_id = nearby_atom.get_full_id()
                         if nearby_atom_id in atom_residue_map:
                             nearby_res_key = atom_residue_map[nearby_atom_id]
                             
-                            # If it's a standard residue and not already marked for extraction
                             if (nearby_res_key[0] in standard_residues and 
                                 nearby_res_key != ns_res_key and 
                                 nearby_res_key not in residues_to_extract):
                                 
-                                # Extract standard residues linked to non-standard residues
                                 residues_to_extract.add(nearby_res_key)
 
     # Second pass: process and rename residues
@@ -725,36 +648,34 @@ def extract_non_standard_residues_from_ref(ref_pdb, output_pdb="part_QM.pdb", ou
     return residue_name_mapping
 
 #Generate a PDB file containing all residues except those in part_QM.pdb,
-#with updated residue names for metal-coordinating residues.    
+#with updated residue names for special residues.    
 def generate_nonstand_pdb(input_pdb, part_qm_pdb, output_pdb="nonstand.pdb"):
     try:
-        # First get the mapping from HI*.pdb, CY*.pdb files to know which residues to rename
+        # First get the mapping from renamed PDB files
         rename_mapping = {}
         for filename in os.listdir():
             if (filename.endswith('.pdb') and 
-                len(filename) == 7):  # e.g., "HI1.pdb"
-                    if filename[2].isdigit():  # CY1
+                len(filename) == 7):  # e.g., "DA1.pdb"
+                    if filename[2].isdigit():  # DA1
                         new_name = filename[:3]
-                    elif filename[0].isdigit():  # 1CY
+                    elif filename[0].isdigit():  # 1DA
                         new_name = filename[:3]
-                    elif filename[1].isdigit():  # C1Y
+                    elif filename[1].isdigit():  # D1A
                         new_name = filename[:3]
                     else:
-                        # If none of the patterns match, skip this file
                         continue
 
-                # Read the first ATOM/HETATM line to get residue info
                     try:
                         with open(filename, 'r') as f:
                             for line in f:
                                 if line.startswith(("ATOM", "HETATM")):
                                     resnum = int(line[22:26])
-                                    # Store mapping by resnum
                                     rename_mapping[resnum] = new_name
                                     break
                     except Exception as e:
                         print(f"Warning: Could not read {filename}: {e}")
                         continue 
+        
         # Read residues to exclude from part_QM.pdb
         exclude_residues = set()
         with open(part_qm_pdb, 'r') as qm_file:
@@ -764,7 +685,6 @@ def generate_nonstand_pdb(input_pdb, part_qm_pdb, output_pdb="nonstand.pdb"):
                     exclude_residues.add(resnum)
         
         # Process input PDB and write output
-        current_resnum = None
         with open(input_pdb, 'r') as infile, open(output_pdb, 'w') as outfile:
             for line in infile:
                 if line.startswith("END"):
@@ -780,7 +700,6 @@ def generate_nonstand_pdb(input_pdb, part_qm_pdb, output_pdb="nonstand.pdb"):
                     # Check if this residue needs to be renamed
                     if resnum in rename_mapping:
                         new_name = rename_mapping[resnum]
-                        # Replace residue name while keeping the rest of the line intact
                         line = line[:17] + f"{new_name:<3}" + line[20:]
                     
                     outfile.write(line)
@@ -909,11 +828,8 @@ def extract_qm_charges(ref_pdb, mol2_file, residue_name_mapping=None):
             # Write XYZ coordinate file only for QM residue
             if create_xyz and xyz_output:
                 with open(xyz_output, 'w') as xyz_file:
-                    # Line 1: number of atoms
                     xyz_file.write(f"{len(qm_atom_ids)}\n")
-                    # Line 2: blank line
                     xyz_file.write("\n")
-                    # Lines 3+: element name (without numbers) and xyz coordinates
                     for atom_id in qm_atom_ids:
                         if atom_id in atom_data:
                             data = atom_data[atom_id]
@@ -926,17 +842,26 @@ def extract_qm_charges(ref_pdb, mol2_file, residue_name_mapping=None):
         raise
 
 #Generate easyPARM_residues.dat file containing information about renamed standard residues.
-#Format: standard_residue.pdb standard_residue.mol2 standard_residue_name
-#Only includes residues that were originally standard residues (like HID, CYS, etc.)
 def generate_easyparm_residues(residue_name_mapping, output_file="easyPARM_residues.dat", output_file2="ALL_RESIDUE_tleap.input"):
 
     try:
-        # Define standard residues
-        standard_residues = {
-            "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
-            "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
-            "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", 'HIS'
+        # Define standard nucleic acid and protein residues
+        standard_nucleic_residues = {
+                "DA", "DT", "DC", "DG", "DU",
+                # RNA
+                "A", "U", "C", "G",
+                # Additional AMBER nucleic acid residues
+                "RA", "RU", "RC", "RG",  # RNA
+                "DAN", "DTN", "DCN", "DGN",  # Deoxy forms
+                "A3", "A5", "AN", "C3", "C5", "CN",  # 3' and 5' terminal
+                "G3", "G5", "GN", "U3", "U5", "UN",
+                "DA3", "DA5", "DAN", "DC3", "DC5", "DCN",
+                "DG3", "DG5", "DGN", "DT3", "DT5", "DTN",
+                "OHE", "ADE", "GUA", "CYT", "THY", "URA",
+                "RA3", "RA5", "RU3", "RU5", "RG3", "RG5", "RC3", "RC5"
         }
+        
+        standard_residues = standard_nucleic_residues 
 
         # List to hold the special residues
         special_residues = []
@@ -969,7 +894,6 @@ def generate_easyparm_residues(residue_name_mapping, output_file="easyPARM_resid
                 f.write(f"saveoff {name} COMPLEX.lib\n")
             f.write(f"quit\n")
 
-
     except Exception as e:
         print(f"Error generating {output_file}: {e}")
         raise
@@ -987,13 +911,11 @@ def generate_easyPARM_nonstand_pdb(input_pdb, part_qm_pdb, output_pdb="easynonst
                     resnum = line[22:26].strip()
                     exclude_residues.add((resname, chain, resnum))
         
-        
         # Track the current residue being processed
         current_exclude = None
         
         with open(input_pdb, 'r') as infile, open(output_pdb, 'w') as outfile:
             for line in infile:
-                # Skip END line
                 if line.startswith("END"):
                     continue
                 
@@ -1002,35 +924,30 @@ def generate_easyPARM_nonstand_pdb(input_pdb, part_qm_pdb, output_pdb="easynonst
                     chain = line[21:22].strip()
                     resnum = line[22:26].strip()
                     
-                    # Check if this is a new residue
                     current_residue = (resname, chain, resnum)
                     
-                    # If this residue is in exclude list, mark it to skip all atoms
                     if current_residue in exclude_residues:
                         current_exclude = current_residue
                         continue
                     
-                    # If we were previously excluding and this is a new residue, reset
                     if current_exclude and current_residue != current_exclude:
                         current_exclude = None
                     
-                    # Write the line if not currently excluding
                     if current_exclude is None:
                         outfile.write(line)
                 
-                # Always write non-residue lines except END
                 elif not line.startswith(("ATOM", "HETATM")):
                     outfile.write(line)
         
     except Exception as e:
-        print(f"Error generating nonstand.pdb: {e}")
+        print(f"Error generating easynonstands.pdb: {e}")
         raise
 
 def main():
     try:
         # Check if library file argument is provided
         if len(sys.argv) < 2:
-            print("Example: python3 code.py amber_fb15.lib")
+            print("Example: python3 code.py amber_parmBSC1.lib")
             sys.exit(1)
 
         # Get library file from command line argument
@@ -1040,7 +957,8 @@ def main():
         if not os.path.exists(lib_file):
             print(f"Error: Library file '{lib_file}' not found")
             sys.exit(1)
-        input_pdb = "metalloprotein_easyPARM.pdb"
+
+        input_pdb = "nucleic_acid_easyPARM.pdb"
         mol2_file = "NEW_COMPLEX.mol2"
         output_mol2 = "COMPLEX_updated.mol2"
         part_qm_pdb = "part_QM.pdb"
@@ -1050,8 +968,8 @@ def main():
         charge_file = "charge_qm.dat"
         easynonstand_pdb = "easynonstands.pdb"
 
-        # Analyze metal site and generate files
-        metal_coordination = analyze_and_extract_metal_site(input_pdb, mol2_file, lib_file, qm_pdb)
+        # Analyze nucleic acid site and generate files
+        metal_coordination = analyze_and_extract_site(input_pdb, mol2_file, lib_file, qm_pdb)
 
         # Update MOL2 file with QM.pdb atom types
         update_mol2_with_qm_types(mol2_file, qm_pdb, output_mol2)
@@ -1059,14 +977,16 @@ def main():
         # Extract non-standard residues
         residue_name_mapping = extract_non_standard_residues_from_ref("REFQM.pdb", part_qm_pdb, part_qm_xyz)
                                                                       
-        # Generate nonstand.pdb excluding the metal and ligand residues
+        # Generate nonstand.pdb excluding the QM region residues
         generate_nonstand_pdb(input_pdb, part_qm_pdb, nonstand_pdb)
  
         # Extract charges for QM region
         extract_qm_charges("REFQM.pdb", "NEW_COMPLEX.mol2", residue_name_mapping) 
-        # After running extract_non_standard_residues_from_ref and generate_nonstand_pdb
+        
+        # Generate easyPARM files
         generate_easyparm_residues(residue_name_mapping)
         generate_easyPARM_nonstand_pdb(input_pdb, part_qm_pdb, easynonstand_pdb)
+        
     except FileNotFoundError as e:
         print(f"Error: File not found - {e}")
     except Exception as e:

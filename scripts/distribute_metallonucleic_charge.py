@@ -19,7 +19,6 @@
 #Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es         #
 ###################################################################################################################
 
-
 from Bio import PDB
 import numpy as np
 import re
@@ -97,352 +96,130 @@ def get_local_environment(residue, target_atom_name, max_bond_distance=1.6):
     bonded_atoms.sort(key=lambda x: x[1])
     return target_atom, [atom for atom, _ in bonded_atoms]
 
-def calculate_methyl_position_from_environment(target_atom, bonded_atoms):
-    if not bonded_atoms:
-        return None, None
-        
-    target_coord = target_atom.coord
-    n_bonds = len(bonded_atoms)
-    
-    ref_coords = [atom.coord for atom in bonded_atoms]
-    
-    if target_atom.element == "N":
-        if n_bonds == 1:
-            ref_vector = ref_coords[0] - target_coord
-            ref_vector = ref_vector / np.linalg.norm(ref_vector)
-            methyl_direction = -ref_vector
-            
-        elif n_bonds == 2:
-            v1 = ref_coords[0] - target_coord
-            v2 = ref_coords[1] - target_coord
-            v1 = v1 / np.linalg.norm(v1)
-            v2 = v2 / np.linalg.norm(v2)
-            
-            avg_direction = (v1 + v2) / 2
-            avg_direction = avg_direction / np.linalg.norm(avg_direction)
-            
-            methyl_direction = -avg_direction
-            
-        elif n_bonds == 3:
-            v1 = ref_coords[0] - target_coord
-            v2 = ref_coords[1] - target_coord
-            v3 = ref_coords[2] - target_coord
-            v1 = v1 / np.linalg.norm(v1)
-            v2 = v2 / np.linalg.norm(v2)
-            v3 = v3 / np.linalg.norm(v3)
-            
-            centroid = (v1 + v2 + v3) / 3
-            if np.linalg.norm(centroid) < 1e-6:
-                plane_normal = np.cross(v2 - v1, v3 - v1)
-                methyl_direction = plane_normal / np.linalg.norm(plane_normal)
-            else:
-                methyl_direction = -centroid / np.linalg.norm(centroid)
-        else:
-            return None, None
-            
-        bond_length = 1.47
-        c_pos = target_coord + methyl_direction * bond_length
-        h_positions = calculate_methyl_hydrogens(c_pos, target_coord, methyl_direction)
-        
-    elif target_atom.element == "C":
-        avg_direction = np.zeros(3)
-        for ref_coord in ref_coords:
-            direction = target_coord - ref_coord
-            avg_direction += direction / np.linalg.norm(direction)
-        avg_direction = avg_direction / n_bonds
-        avg_direction = avg_direction / np.linalg.norm(avg_direction)
-        
-        bond_length = 1.5
-        if n_bonds == 1:
-            methyl_direction = avg_direction
-        elif n_bonds == 2:
-            bisector = avg_direction
-            plane_normal = np.cross(ref_coords[1] - ref_coords[0], bisector)
-            plane_normal = plane_normal / np.linalg.norm(plane_normal)
-            methyl_direction = bisector
-        elif n_bonds == 3:
-            methyl_direction = -avg_direction
-        else:
-            return None, None
-            
-        c_pos = target_coord + methyl_direction * bond_length
-        h_positions = calculate_methyl_hydrogens(c_pos, target_coord, methyl_direction)
-    else:
-        return None, None
-    
-    return c_pos, h_positions
-
-def calculate_methyl_hydrogens(c_pos, target_coord, methyl_direction, h_bond_length=1.09, h_bond_angle=np.radians(109.5)):
-    perp1 = get_perpendicular_vector(methyl_direction)
-    perp2 = np.cross(methyl_direction, perp1)
+# Calculate methyl group position for phosphate capping
+def calculate_methyl_hydrogens(c_pos, direction_vector, h_bond_length=1.09):
+    h_bond_angle = np.radians(109.5)
+    perp1 = get_perpendicular_vector(direction_vector)
+    perp2 = np.cross(direction_vector, perp1)
     perp2 = perp2 / np.linalg.norm(perp2)
     
     h_positions = []
-    rot_angle = np.radians(120)
-    
     for i in range(3):
-        rotation = i * rot_angle
-        h_direction = (np.cos(h_bond_angle) * -methyl_direction + 
+        rotation = i * np.radians(120)
+        h_direction = (np.cos(h_bond_angle) * direction_vector + 
                       np.sin(h_bond_angle) * (np.cos(rotation) * perp1 + 
                                             np.sin(rotation) * perp2))
         h_pos = c_pos + h_direction * h_bond_length
         h_positions.append(h_pos)
-    
     return h_positions
 
-def calculate_terminal_groups_position(target_atom, bonded_atoms):
+#Calculate capping group for O3' terminal:
+def calculate_phosphate_cap_for_o3prime(o3_atom, bonded_atoms):
+    """
+              O
+              ||
+    O3'---P---O---CH3
+              |
+              O
+    """
     if not bonded_atoms:
         return None
         
-    target_coord = target_atom.coord
-    n_bonds = len(bonded_atoms)
+    o3_coord = o3_atom.coord
     
-    ref_coords = [atom.coord for atom in bonded_atoms]
-    
-    if target_atom.element == "N":  # N-terminal: Add acetyl (CO-CH3)
-        if n_bonds >= 1:  # As long as N has at least one bond
-            ref_vector = ref_coords[0] - target_coord
-            ref_vector = ref_vector / np.linalg.norm(ref_vector)
-            acetyl_direction = -ref_vector
-            
-            # Position the C=O carbon (1.47Å from N)
-            co_bond_length = 1.47
-            co_carbon_pos = target_coord + acetyl_direction * co_bond_length
-            
-            # Position the O (1.23Å from C=O carbon)
-            co_vector = acetyl_direction
-            o_pos = co_carbon_pos + co_vector * 1.23
-            
-            # Position the methyl carbon (1.5Å from C=O carbon)
-            ch3_vector = get_perpendicular_vector(co_vector)
-            ch3_angle = np.radians(120)  # Tetrahedral angle
-            ch3_direction = (np.cos(ch3_angle) * co_vector + 
-                           np.sin(ch3_angle) * ch3_vector)
-            ch3_pos = co_carbon_pos + ch3_direction * 1.5
-            
-            # Calculate methyl hydrogens
-            h_positions = calculate_methyl_hydrogens(ch3_pos, co_carbon_pos, ch3_direction)
-            
-            return {
-                'type': 'acetyl',
-                'positions': {
-                    'co_carbon': co_carbon_pos,
-                    'oxygen': o_pos,
-                    'methyl_carbon': ch3_pos,
-                    'hydrogens': h_positions
-                }
-            }
-            
-    elif target_atom.element == "C":  # C-terminal: Add NH2
-        if n_bonds >= 1:
-            avg_direction = np.zeros(3)
-            for ref_coord in ref_coords:
-                direction = target_coord - ref_coord
-                avg_direction += direction / np.linalg.norm(direction)
-            avg_direction = avg_direction / n_bonds
-            avg_direction = avg_direction / np.linalg.norm(avg_direction)
-            
-            # Position NH2 group
-            n_bond_length = 1.32  # C-N bond length
-            n_pos = target_coord + avg_direction * n_bond_length
-            
-            # Calculate H positions for NH2
-            h_bond_length = 1.01  # N-H bond length
-            h_angle = np.radians(120)  # H-N-H angle
-            
-            perp = get_perpendicular_vector(avg_direction)
-            h1_direction = (np.cos(h_angle/2) * avg_direction + 
-                          np.sin(h_angle/2) * perp)
-            h2_direction = (np.cos(h_angle/2) * avg_direction - 
-                          np.sin(h_angle/2) * perp)
-            
-            h1_pos = n_pos + h1_direction * h_bond_length
-            h2_pos = n_pos + h2_direction * h_bond_length
-            
-            return {
-                'type': 'amino',
-                'positions': {
-                    'nitrogen': n_pos,
-                    'hydrogen1': h1_pos,
-                    'hydrogen2': h2_pos
-                }
-            }
-            
-    return None
-
-def get_amide_plane_vectors(target_coord, bonded_atoms):
-    # Find alpha carbon and any H atoms
-    alpha_c = None
-    h_atom = None
-    other_heavy = []
-    
-    for atom in bonded_atoms:
-        if atom.name == "CA":
-            alpha_c = atom
-        elif atom.name.startswith("H"):
-            h_atom = atom
-        else:
-            other_heavy.append(atom)
-    
-    if alpha_c is None and not other_heavy:
-        return None, None
-        
-    # Use alpha carbon if available, otherwise use first heavy atom
-    ref_atom = alpha_c if alpha_c is not None else other_heavy[0]
-    ref_vector = target_coord - ref_atom.coord
-    ref_vector = ref_vector / np.linalg.norm(ref_vector)
-    
-    # Get perpendicular vector avoiding H if present
-    if h_atom:
-        h_vector = h_atom.coord - target_coord
-        h_vector = h_vector / np.linalg.norm(h_vector)
-        plane_normal = np.cross(ref_vector, h_vector)
-    else:
-        # Use any valid perpendicular vector
-        plane_normal = get_perpendicular_vector(ref_vector)
-    
-    plane_normal = plane_normal / np.linalg.norm(plane_normal)
-    
-    return plane_normal, ref_vector
-def calculate_acetyl_position_from_environment(target_atom, bonded_atoms):
-    if not bonded_atoms or len(bonded_atoms) < 1:
-        return None, None, None
-        
-    target_coord = target_atom.coord
-    
-    # Get amide plane geometry
-    plane_normal, ca_n_vector = get_amide_plane_vectors(target_coord, bonded_atoms)
-    if plane_normal is None:
-        return None, None, None
-    
-    # Calculate C-N bond direction in the amide plane
-    # Should be roughly opposite to CA-N but slightly rotated
-    c_n_angle = np.radians(123)  # Typical C-N-CA angle in amides
-    c_n_vector = rotate_vector(-ca_n_vector, plane_normal, c_n_angle)
-    
-    # Place carbonyl carbon
-    c_n_bond = 1.335  # Amide C-N bond length
-    c_pos = target_coord + c_n_vector * c_n_bond
-    
-    # Calculate carbonyl oxygen position
-    # O=C-N angle should be ~121Â° and in the amide plane
-    o_c_n_angle = np.radians(121)
-    o_direction = rotate_vector(-c_n_vector, plane_normal, o_c_n_angle)
-    c_o_bond = 1.229  # C=O bond length
-    o_pos = c_pos + o_direction * c_o_bond
-    
-    # Calculate methyl carbon position
-    # Should be roughly tetrahedral relative to C=O and C-N bonds
-    c_c_bond = 1.508  # C-C single bond length
-    ch3_c_n_angle = np.radians(85)  # Typical CH3-C-N angle
-    
-    # Rotate in opposite direction from oxygen to maintain proper geometry
-    ch3_direction = rotate_vector(-c_n_vector, plane_normal, -ch3_c_n_angle)
-    ch3_pos = c_pos + ch3_direction * c_c_bond
-    
-    return c_pos, o_pos, ch3_pos
-
-def calculate_acetyl_group(n_atom, bonded_atoms):
-    if not bonded_atoms or len(bonded_atoms) == 0:
-        return None, None, None, None
-        
-    # Calculate core acetyl positions
-    c_pos, o_pos, ch3_pos = calculate_acetyl_position_from_environment(n_atom, bonded_atoms)
-    
-    if c_pos is None:
-        return None, None, None, None
-    
-    # Calculate methyl hydrogen positions ensuring proper tetrahedral geometry
-    c_ch3_vector = ch3_pos - c_pos
-    c_ch3_vector = c_ch3_vector / np.linalg.norm(c_ch3_vector)
-    
-    # Calculate reference vector for hydrogen placement
-    # Use C=O bond as reference to ensure proper staggering
-    co_vector = o_pos - c_pos
-    co_vector = co_vector / np.linalg.norm(co_vector)
-    
-    # Calculate hydrogens with 109.5Â° tetrahedral angles
-    # and proper staggered conformation relative to C=O
-    perp1 = np.cross(c_ch3_vector, co_vector)
-    perp1 = perp1 / np.linalg.norm(perp1)
-    perp2 = np.cross(c_ch3_vector, perp1)
-    perp2 = perp2 / np.linalg.norm(perp2)
-    
-    h_bond_length = 1.090  # C-H bond length
-    h_positions = []
-    
-    for i in range(3):
-        angle = i * np.radians(120)
-        h_direction = (np.cos(np.radians(109.5)) * -c_ch3_vector +
-                      np.sin(np.radians(109.5)) * 
-                      (np.cos(angle) * perp1 + np.sin(angle) * perp2))
-        h_pos = ch3_pos + h_direction * h_bond_length
-        h_positions.append(h_pos)
-    
-    return c_pos, o_pos, ch3_pos, h_positions
-
-def calculate_amino_group(c_atom, bonded_atoms):
-    if not bonded_atoms or len(bonded_atoms) == 0:
-        return None, None
-        
-    c_coord = c_atom.coord
-    n_bonds = len(bonded_atoms)
-    
-    # Calculate direction for NH2 attachment
+    # Calculate average direction from bonded atoms
     avg_direction = np.zeros(3)
     for atom in bonded_atoms:
-        direction = atom.coord - c_coord
+        direction = atom.coord - o3_coord
         direction = direction / np.linalg.norm(direction)
         avg_direction += direction
     
-    avg_direction = -avg_direction / n_bonds
+    avg_direction = -avg_direction / len(bonded_atoms)
     avg_direction = avg_direction / np.linalg.norm(avg_direction)
     
-    # Place nitrogen
-    c_n_bond = 1.35  # C-N bond length
-    n_pos = c_coord + avg_direction * c_n_bond
+    # Place phosphorus
+    p_o_bond = 1.61  # P-O bond length
+    p_pos = o3_coord + avg_direction * p_o_bond
     
-    # Place hydrogens
-    n_h_bond = 1.01  # N-H bond length
-    perp = get_perpendicular_vector(avg_direction)
-    h_positions = []
+    # Calculate three oxygen positions around phosphorus (tetrahedral)
+    # One double-bonded O, two single-bonded O (one will connect to CH3)
+    perp1 = get_perpendicular_vector(avg_direction)
+    perp2 = np.cross(avg_direction, perp1)
+    perp2 = perp2 / np.linalg.norm(perp2)
     
-    for angle in [-60, 60]:
-        h_direction = rotate_vector(avg_direction, perp, np.radians(angle))
-        h_pos = n_pos + h_direction * n_h_bond
-        h_positions.append(h_pos)
+    # Double-bonded oxygen (opposite to O3')
+    o_double_bond = 1.48  # P=O bond length
+    o_double_pos = p_pos + (-avg_direction) * o_double_bond
     
-    return n_pos, h_positions
+    # Two single-bonded oxygens at tetrahedral angles
+    tet_angle = np.radians(109.5)
+    o_single_bond = 1.61  # P-O single bond
+    
+    # First single-bonded O
+    o1_direction = rotate_vector(-avg_direction, perp1, tet_angle)
+    o1_pos = p_pos + o1_direction * o_single_bond
+    
+    # Second single-bonded O (this will connect to CH3)
+    o2_direction = rotate_vector(-avg_direction, perp1, -tet_angle)
+    o2_pos = p_pos + o2_direction * o_single_bond
+    
+    # Calculate methyl group attached to o2
+    c_o_bond = 1.43  # C-O bond length
+    c_direction = o2_direction / np.linalg.norm(o2_direction)
+    ch3_pos = o2_pos + c_direction * c_o_bond
+    
+    # Calculate hydrogen positions for methyl group
+    h_positions = calculate_methyl_hydrogens(ch3_pos, c_direction)
+    
+    return {
+        'P': p_pos,
+        'O_double': o_double_pos,
+        'O_single1': o1_pos,
+        'O_single2': o2_pos,
+        'CH3': ch3_pos,
+        'H_positions': h_positions
+    }
 
-#Identify N-terminal and C-terminal residues for each chain.
-def identify_terminal_residues(structure, standard_residues):
+#Calculate capping group for 5' phosphate terminal:
+def calculate_methyl_cap_for_phosphate(p_atom, bonded_atoms):
+    """
+    P---O---CH3
+    """
+    if not bonded_atoms:
+        return None
+        
+    p_coord = p_atom.coord
     
-    terminal_info = {}
+    # Calculate direction away from bonded atoms
+    avg_direction = np.zeros(3)
+    for atom in bonded_atoms:
+        direction = atom.coord - p_coord
+        direction = direction / np.linalg.norm(direction)
+        avg_direction += direction
     
-    # Base residue names (without N/C prefix)
-    base_residues = {res for res in standard_residues 
-                     if not res.startswith(('N', 'C')) and res not in {'NHE', 'NME', 'ACE'}}
+    avg_direction = -avg_direction / len(bonded_atoms)
+    avg_direction = avg_direction / np.linalg.norm(avg_direction)
     
-    for model in structure:
-        for chain in model:
-            residues = [res for res in chain if res.get_resname() in base_residues]
-            
-            if len(residues) == 0:
-                continue
-            
-            # Mark first standard residue as N-terminal
-            first_res = residues[0]
-            terminal_info[(chain.id, first_res.get_id())] = 'NTERM'
-            
-            # Mark last standard residue as C-terminal
-            last_res = residues[-1]
-            terminal_info[(chain.id, last_res.get_id())] = 'CTERM'
+    # Place oxygen
+    p_o_bond = 1.61  # P-O bond length
+    o_pos = p_coord + avg_direction * p_o_bond
     
-    return terminal_info
+    # Place methyl carbon
+    c_o_bond = 1.43  # C-O bond length
+    c_pos = o_pos + avg_direction * c_o_bond
+    
+    # Calculate hydrogen positions
+    h_positions = calculate_methyl_hydrogens(c_pos, avg_direction)
+    
+    return {
+        'O': o_pos,
+        'CH3': c_pos,
+        'H_positions': h_positions
+    }
 
 def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU', 'NA', 'K', 'LI', 'RB', 'CS', 'MG', 'CA', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI', 'LA', 'CE', 'PR', 'ND', 'PM', 'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU', 'FE2', 'FE3', 'FE4', 'CU1', 'CU2', 'MN2', 'MN3', 'MN4', 'CO2', 'CO3', 'NI2', 'NI3', 'V2', 'V3', 'V4', 'V5'], distance_cutoff=2.6):
     parser = PDB.PDBParser(QUIET=True)
-    structure = parser.get_structure('protein', input_pdb)
+    structure = parser.get_structure('nucleic_acid', input_pdb)
     
     if isinstance(metals, list):
         metals = set(metals)
@@ -450,30 +227,27 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
         metals = {'MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU', 
                 'NA', 'K', 'CA', 'LI', 'RB', 'CS', 'MG', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI', 
                 'LA', 'CE', 'PR', 'ND', 'PM', 'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU'}
-
+    
+    # Standard nucleic acid residues (DNA and RNA)
     standard_residues = {
-            # Base residues
-            "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
-            "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
-            "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", "NHE", "NME",
-            "ACE",
-            # N-terminal variants
-            "NALA", "NARG", "NASH", "NASN", "NASP", "NCYM", "NCYS", "NCYX", "NGLH", "NGLN",
-            "NGLU", "NGLY", "NHID", "NHIE", "NHIP", "NHYP", "NILE", "NLEU", "NLYN", "NLYS",
-            "NMET", "NPHE", "NPRO", "NSER", "NTHR", "NTRP", "NTYR", "NVAL", 
-            # C-terminal variants
-            "CALA", "CARG", "CASH", "CASN", "CASP", "CCYM", "CCYS", "CCYX", "CGLH", "CGLN",
-            "CGLU", "CGLY", "CHID", "CHIE", "CHIP", "CHYP", "CILE", "CLEU", "CLYN", "CLYS",
-            "CMET", "CPHE", "CPRO", "CSER", "CTHR", "CTRP", "CTYR", "CVAL"
+        "DA", "DT", "DC", "DG", "DU",
+        # RNA
+        "A", "U", "C", "G",
+        # Additional AMBER nucleic acid residues
+        "RA", "RU", "RC", "RG",  # RNA
+        "DAN", "DTN", "DCN", "DGN",  # Deoxy forms
+        "A3", "A5", "AN", "C3", "C5", "CN",  # 3' and 5' terminal
+        "G3", "G5", "GN", "U3", "U5", "UN",
+        "DA3", "DA5", "DAN", "DC3", "DC5", "DCN",
+        "DG3", "DG5", "DGN", "DT3", "DT5", "DTN",
+        "OHE", "ADE", "GUA", "CYT", "THY", "URA",
+        "RA3", "RA5", "RU3", "RU5", "RG3", "RG5", "RC3", "RC5"
     }
-
-    # Identify terminals
-    terminal_info = identify_terminal_residues(structure, standard_residues)
-
+    
     mol2_charges = extract_charges_from_mol2(mol2_file)
     if not mol2_charges:
         raise Exception("Failed to extract charges from MOL2 file")
-
+    
     metal_coordination = {}
     residues_to_extract = set()
     coordinated_standard_residues = set()
@@ -487,7 +261,6 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
             for residue in chain:
                 residue_key = (chain.id, residue.get_id())
                 original_order.append(residue_key)
-
                 for atom in residue:
                     if atom.element in metals:
                         metal_coord = atom.coord
@@ -498,7 +271,6 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                             'coordinating_residues': [],
                             'coordination_number': 0
                         }
-
                         for chain2 in model:
                             for residue2 in chain2:
                                 is_coordinating = False
@@ -519,7 +291,6 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                                         }
                                         coordinating_atoms.append(coord_info)
                                         metal_coordination[key]['coordination_number'] += 1
-
                                 if is_coordinating:
                                     metal_coordination[key]['coordinating_residues'].extend(coordinating_atoms)
                                     residues_to_extract.add((chain2.id, residue2.get_id()))
@@ -528,11 +299,11 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                                         coordinated_standard_residues.add((chain2.id, residue2.get_id()))
                                         res_name = residue2.get_resname()
                                         coordinated_residue_counts[res_name] = coordinated_residue_counts.get(res_name, 0) + 1
-
+    
     # Find standard residues linked to non-standard coordinating residues
     heavy_atoms = [atom for model in structure for chain in model for residue in chain for atom in residue if atom.element != 'H']
     ns = PDB.NeighborSearch(heavy_atoms)
-    bond_cutoff = 1.9  # Covalent bond distance cutoff in Å
+    bond_cutoff = 1.9  # Covalent bond distance cutoff in Ã…
     
     # Find standard residues linked to non-standard coordinating residues
     nonstandard_coordinating = [(chain_id, res_id) for chain_id, res_id in residues_to_extract 
@@ -556,7 +327,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                             coordinated_standard_residues.add(nearby_key)
                             res_name = nearby_res.resname
                             coordinated_residue_counts[res_name] = coordinated_residue_counts.get(res_name, 0) + 1
-
+    
     # Improved cross-residue bond detection
     extracted_atoms = []
     extracted_residue_objects = {}
@@ -600,17 +371,17 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
             # Only record if it's a different residue
             if nearby_res_key != res_key:
                 cross_residue_bonds[res_key][atom_name].append(nearby_atom)
-
+    
     # Lists to store all atoms (original and capping)
     all_atoms = []
     terminal_modifications = []
-
+    
     # Process residues for extraction
     for chain_id, res_id in original_order:
         if (chain_id, res_id) in residues_to_extract:
             residue = structure[0][chain_id][res_id]
             is_standard = residue.resname in standard_residues
-
+            
             # Add original atoms
             for atom in residue:
                 element = atom.element if atom.element != " " else atom.name[0]
@@ -626,91 +397,103 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                     'atomic_number': get_atomic_number(element),
                     'is_standard': 0 if is_standard else 0
                 })
-
-            # Add terminal groups for standard residues that coordinate with metals
+            
+            # Add terminal groups for standard nucleic acid residues that coordinate with metals
             if (chain_id, res_id) in coordinated_standard_residues:
                 res_key = (chain_id, res_id)
                 
-                # Check if N atom needs acetylation
-                n_atom, n_bonded = get_local_environment(residue, "N", max_bond_distance=1.6)
-                if n_atom is not None:
-                    needs_acetyl = True
+                # Check if O3' needs phosphate capping
+                o3_atom, o3_bonded = get_local_environment(residue, "O3'", max_bond_distance=1.7)
+                if o3_atom is not None:
+                    needs_o3_cap = True
                     
-                    # Check if N already has cross-residue bonds within the extracted residues
-                    if "N" in cross_residue_bonds[res_key] and cross_residue_bonds[res_key]["N"]:
-                        # N has bonds to another residue within our selection
-                        needs_acetyl = False
+                    # Check if O3' already has cross-residue bonds (connected to next residue's P)
+                    if "O3'" in cross_residue_bonds[res_key] and cross_residue_bonds[res_key]["O3'"]:
+                        needs_o3_cap = False
                     
-                    # Alternatively, check if N already has 3+ total bonds (already capped or part of chain)
-                    if len(n_bonded) >= 3:
-                        needs_acetyl = False
+                    # Check if O3' already has 2+ bonds (already bonded to P)
+                    if len(o3_bonded) >= 2:
+                        needs_o3_cap = False
                         
-                    if needs_acetyl:
-                        c_pos, o_pos, ch3_pos, h_positions = calculate_acetyl_group(n_atom, n_bonded)
-                        if c_pos is not None:
-                            # Add C=O carbon
-                            terminal_modifications.append({
-                                'element': 'C', 'coord': c_pos, 'name': 'CAC',
-                                'resname': residue.resname, 'resnum': res_id[1],
-                                'is_capping': True
-                            })
-                            
-                            # Add O
-                            terminal_modifications.append({
-                                'element': 'O', 'coord': o_pos, 'name': 'OAC',
-                                'resname': residue.resname, 'resnum': res_id[1],
-                                'is_capping': True
-                            })
-                            
-                            # Add methyl carbon
-                            terminal_modifications.append({
-                                'element': 'C', 'coord': ch3_pos, 'name': 'CME',
-                                'resname': residue.resname, 'resnum': res_id[1],
-                                'is_capping': True
-                            })
-                            
-                            # Add methyl hydrogens
-                            for i, h_pos in enumerate(h_positions):
+                    if needs_o3_cap:
+                        cap_data = calculate_phosphate_cap_for_o3prime(o3_atom, o3_bonded)
+                        if cap_data is not None:
+                            terminal_modifications.extend([
+                                {
+                                    'element': 'P', 'coord': cap_data['P'], 'name': 'PC',
+                                    'resname': residue.resname, 'resnum': res_id[1],
+                                    'is_capping': True
+                                },
+                                {
+                                    'element': 'O', 'coord': cap_data['O_double'], 'name': 'O1C',
+                                    'resname': residue.resname, 'resnum': res_id[1],
+                                    'is_capping': True
+                                },
+                                {
+                                    'element': 'O', 'coord': cap_data['O_single1'], 'name': 'O2C',
+                                    'resname': residue.resname, 'resnum': res_id[1],
+                                    'is_capping': True
+                                },
+                                {
+                                    'element': 'O', 'coord': cap_data['O_single2'], 'name': 'O3C',
+                                    'resname': residue.resname, 'resnum': res_id[1],
+                                    'is_capping': True
+                                },
+                                {
+                                    'element': 'C', 'coord': cap_data['CH3'], 'name': 'CMC',
+                                    'resname': residue.resname, 'resnum': res_id[1],
+                                    'is_capping': True
+                                }
+                            ])
+                            for i, h_pos in enumerate(cap_data['H_positions']):
                                 terminal_modifications.append({
-                                    'element': 'H', 'coord': h_pos, 'name': f'HM{i+1}',
+                                    'element': 'H', 'coord': h_pos, 'name': f'HMC{i+1}',
                                     'resname': residue.resname, 'resnum': res_id[1],
                                     'is_capping': True
                                 })
 
-                # Check if C atom needs amination
-                c_atom, c_bonded = get_local_environment(residue, "C", max_bond_distance=1.6)
-                if c_atom is not None:
-                    needs_amination = True
+                # Check if 5' phosphate (P) needs methyl capping
+                p_atom, p_bonded = get_local_environment(residue, "P", max_bond_distance=1.7)
+                if p_atom is not None:
+                    needs_p_cap = True
                     
-                    # Check if C already has cross-residue bonds within the extracted residues
-                    if "C" in cross_residue_bonds[res_key] and cross_residue_bonds[res_key]["C"]:
-                        # C has bonds to another residue within our selection
-                        needs_amination = False
+                    # Check if P already has cross-residue bonds (connected to previous residue's O3')
+                    if "P" in cross_residue_bonds[res_key] and cross_residue_bonds[res_key]["P"]:
+                        # Check if any of the bonded atoms is an O3' from another residue
+                        for bonded_atom in cross_residue_bonds[res_key]["P"]:
+                            if bonded_atom.name == "O3'":
+                                needs_p_cap = False
+                                break
                     
-                    # For C atom in standard residues, it should have 3 bonds if capped (CA, O, NH2)
-                    # or 3 bonds if part of a peptide chain (CA, O, next residue's N)
-                    # If it only has 2 bonds (likely CA and O), it needs capping
-                    if len(c_bonded) >= 3:
-                        needs_amination = False
+                    # P typically has 4 bonds: 3 oxygens + 1 to O5'
+                    # If it has all expected bonds within the residue + cross-residue, no cap needed
+                    # Count oxygen bonds
+                    o_bonds = sum(1 for atom in p_bonded if atom.element == 'O')
+                    if o_bonds >= 4:  # Full coordination
+                        needs_p_cap = False
                         
-                    if needs_amination:
-                        n_pos, h_positions = calculate_amino_group(c_atom, c_bonded)
-                        if n_pos is not None:
-                            # Add N
-                            terminal_modifications.append({
-                                'element': 'N', 'coord': n_pos, 'name': 'NT',
-                                'resname': residue.resname, 'resnum': res_id[1],
-                                'is_capping': True
-                            })
-                            
-                            # Add H atoms
-                            for i, h_pos in enumerate(h_positions):
+                    if needs_p_cap:
+                        cap_data = calculate_methyl_cap_for_phosphate(p_atom, p_bonded)
+                        if cap_data is not None:
+                            terminal_modifications.extend([
+                                {
+                                    'element': 'O', 'coord': cap_data['O'], 'name': 'OPC',
+                                    'resname': residue.resname, 'resnum': res_id[1],
+                                    'is_capping': True
+                                },
+                                {
+                                    'element': 'C', 'coord': cap_data['CH3'], 'name': 'CPC',
+                                    'resname': residue.resname, 'resnum': res_id[1],
+                                    'is_capping': True
+                                }
+                            ])
+                            for i, h_pos in enumerate(cap_data['H_positions']):
                                 terminal_modifications.append({
-                                    'element': 'H', 'coord': h_pos, 'name': f'HT{i+1}',
+                                    'element': 'H', 'coord': h_pos, 'name': f'HPC{i+1}',
                                     'resname': residue.resname, 'resnum': res_id[1],
                                     'is_capping': True
                                 })
-
+    
     # Add terminal modifications to all_atoms
     all_atoms.extend(terminal_modifications)
     
@@ -720,8 +503,15 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
             'atomic_number': get_atomic_number(mod['element']),
             'is_standard': 1  # Capping groups always marked as standard
         })
+    
+    # Calculate the total charge contribution from capping atoms
+    # For phosphate cap: -1 charge (P=O^- and two O^-)
+    # For methyl cap: 0 charge (neutral methyl group)
+    total_cap_charge = 0.0
+    phosphate_cap_count = sum(1 for atom in terminal_modifications if atom['name'] == 'PC')  # Count phosphate caps
+    total_cap_charge = -phosphate_cap_count  # Each phosphate cap contributes -1 charge
 
-    # Write initial_structure.xyz
+    # Write reference_structure.xyz
     with open('reference_structure.xyz', 'w') as f:
         f.write(f"{len(all_atoms)}\n\n")
         for atom in all_atoms:
@@ -729,7 +519,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                 f.write(f"{atom['element']:2} {atom['coord'][0]:10.6f} {atom['coord'][1]:10.6f} {atom['coord'][2]:10.6f} {atom['name']:4} {atom['resname']:3} {atom['resnum']:4}  CAPPING\n")
             else:
                 f.write(f"{atom['element']:2} {atom['coord'][0]:10.6f} {atom['coord'][1]:10.6f} {atom['coord'][2]:10.6f} {atom['name']:4} {atom['resname']:3} {atom['resnum']:4}\n")
-
+    
     # Write processed charges
     with open('processed_charges.dat', 'w') as charge_file:
         if len(atoms_data) != len(mol2_charges):
@@ -738,7 +528,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
         for i, atom_data in enumerate(atoms_data):
             charge = 0.000000 if atom_data['is_standard'] == 1 else mol2_charges[i]
             charge_file.write(f"{charge:.6f}\n")
-
+    
     # Generate summary of coordinated residues
     coordinated_residue_list = [(res_name, count) for res_name, count in coordinated_residue_counts.items()]
     
@@ -754,148 +544,105 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
             for res in info['coordinating_residues']:
                 f.write(f"  {res['residue_name']} {res['residue_number']} "
                        f"(Chain {res['chain']}) - {res['atom_name']} "
-                       f"at {res['distance']} Å\n")
+                       f"at {res['distance']} Ã…\n")
             f.write("\n")
-
+        
         f.write("\nCAPPING Group Additions:\n")
         f.write("=====================\n")
-        acetyl_count = sum(1 for atom in terminal_modifications if atom['name'] in ['CAC', 'CME'])
-        amino_count = sum(1 for atom in terminal_modifications if atom['name'] == 'NT')
-        f.write(f"Total acetyl groups added: {acetyl_count//2}\n")  # Each acetyl has CO and methyl C
-        f.write(f"Total amino groups added: {amino_count}\n")
+        phosphate_cap_count = sum(1 for atom in terminal_modifications if atom['name'] == 'PC')
+        methyl_cap_count = sum(1 for atom in terminal_modifications if atom['name'] == 'OPC')
+        f.write(f"Total O3' phosphate caps added: {phosphate_cap_count}\n")
+        f.write(f"Total 5' phosphate methyl caps added: {methyl_cap_count}\n")
         f.write(f"Total additional atoms added: {len(terminal_modifications)}\n\n")
-    with open('terminal_info.dat', 'w') as f:
-        for (chain_id, res_id), terminal_type in terminal_info.items():
-            f.write(f"{chain_id} {res_id[1]} {terminal_type}\n")
+    
+    return metal_coordination, coordinated_residue_list, total_cap_charge
 
-    return metal_coordination, coordinated_residue_list, terminal_info
 
 #Provides default charge for N,C,O and CA atoms from amber force field.
 def get_default_reference_charges():
     return {
-    'ALA': {'N': -0.4157, 'CA': 0.0337, 'C': 0.5973, 'O': -0.5679},
-    'ARG': {'N': -0.3479, 'CA': -0.2637, 'C': 0.7341, 'O': -0.5894},
-    'ASH': {'N': -0.4157, 'CA': 0.0341, 'C': 0.5973, 'O': -0.5679},
-    'ASN': {'N': -0.4157, 'CA': 0.0143, 'C': 0.5973, 'O': -0.5679},
-    'ASP': {'N': -0.5163, 'CA': 0.0381, 'C': 0.5366, 'O': -0.5819},
-    'CYM': {'N': -0.4157, 'CA': -0.0351, 'C': 0.5973, 'O': -0.5679},
-    'CYS': {'N': -0.4157, 'CA': 0.0213, 'C': 0.5973, 'O': -0.5679},
-    'CYX': {'N': -0.4157, 'CA': 0.0429, 'C': 0.5973, 'O': -0.5679},
-    'GLH': {'N': -0.4157, 'CA': 0.0145, 'C': 0.5973, 'O': -0.5679},
-    'GLN': {'N': -0.4157, 'CA': -0.0031, 'C': 0.5973, 'O': -0.5679},
-    'GLU': {'N': -0.5163, 'CA': 0.0397, 'C': 0.5366, 'O': -0.5819},
-    'GLY': {'N': -0.4157, 'CA': -0.0252, 'C': 0.5973, 'O': -0.5679},
-    'HID': {'N': -0.4157, 'CA': 0.0188, 'C': 0.5973, 'O': -0.5679},
-    'HIE': {'N': -0.4157, 'CA': -0.0581, 'C': 0.5973, 'O': -0.5679},
-    'HIP': {'N': -0.3479, 'CA': -0.1354, 'C': 0.7341, 'O': -0.5894},
-    'HYP': {'N': -0.2548, 'CA': 0.0047, 'C': 0.5896, 'O': -0.5748},
-    'ILE': {'N': -0.4157, 'CA': -0.0597, 'C': 0.5973, 'O': -0.5679},
-    'LEU': {'N': -0.4157, 'CA': -0.0518, 'C': 0.5973, 'O': -0.5679},
-    'LYN': {'N': -0.4157, 'CA': -0.07206, 'C': 0.5973, 'O': -0.5679},
-    'LYS': {'N': -0.3479, 'CA': -0.24, 'C': 0.7341, 'O': -0.5894},
-    'MET': {'N': -0.4157, 'CA': -0.0237, 'C': 0.5973, 'O': -0.5679},
-    'PHE': {'N': -0.4157, 'CA': -0.0024, 'C': 0.5973, 'O': -0.5679},
-    'PRO': {'N': -0.2548, 'CA': -0.0266, 'C': 0.5896, 'O': -0.5748},
-    'SER': {'N': -0.4157, 'CA': -0.0249, 'C': 0.5973, 'O': -0.5679},
-    'THR': {'N': -0.4157, 'CA': -0.0389, 'C': 0.5973, 'O': -0.5679},
-    'TRP': {'N': -0.4157, 'CA': -0.0275, 'C': 0.5973, 'O': -0.5679},
-    'TYR': {'N': -0.4157, 'CA': -0.0014, 'C': 0.5973, 'O': -0.5679},
-    'VAL': {'N': -0.4157, 'CA': -0.0875, 'C': 0.5973, 'O': -0.5679},
-    'CALA': {'N': -0.3821, 'CA': -0.1747, 'C': 0.7731, 'O': -0.8055},
-    'CARG': {'N': -0.3481, 'CA': -0.3068, 'C': 0.8557, 'O': -0.8266},
-    'CASN': {'N': -0.3821, 'CA': -0.208, 'C': 0.805, 'O': -0.8147},
-    'CASP': {'N': -0.5192, 'CA': -0.1817, 'C': 0.7256, 'O': -0.7887},
-    'CCYS': {'N': -0.3821, 'CA': -0.1635, 'C': 0.7497, 'O': -0.7981},
-    'CCYX': {'N': -0.3821, 'CA': -0.1318, 'C': 0.7618, 'O': -0.8041},
-    'CGLN': {'N': -0.3821, 'CA': -0.2248, 'C': 0.7775, 'O': -0.8042},
-    'CGLU': {'N': -0.5192, 'CA': -0.2059, 'C': 0.742, 'O': -0.793},
-    'CGLY': {'N': -0.3821, 'CA': -0.2493, 'C': 0.7231, 'O': -0.7855},
-    'CHID': {'N': -0.3821, 'CA': -0.1739, 'C': 0.7615, 'O': -0.8016},
-    'CHIE': {'N': -0.3821, 'CA': -0.2699, 'C': 0.7916, 'O': -0.8065},
-    'CHIP': {'N': -0.3481, 'CA': -0.1445, 'C': 0.8032, 'O': -0.8177},
-    'CHYP': {'N': -0.2802, 'CA': -0.0993, 'C': 0.6631, 'O': -0.7697},
-    'CILE': {'N': -0.3821, 'CA': -0.31, 'C': 0.8343, 'O': -0.819},
-    'CLEU': {'N': -0.3821, 'CA': -0.2847, 'C': 0.8326, 'O': -0.8199},
-    'CLYS': {'N': -0.3481, 'CA': -0.2903, 'C': 0.8488, 'O': -0.8252},
-    'CMET': {'N': -0.3821, 'CA': -0.2597, 'C': 0.8013, 'O': -0.8105},
-    'CPHE': {'N': -0.3821, 'CA': -0.1825, 'C': 0.766, 'O': -0.8026},
-    'CPRO': {'N': -0.2802, 'CA': -0.1336, 'C': 0.6631, 'O': -0.7697},
-    'CSER': {'N': -0.3821, 'CA': -0.2722, 'C': 0.8113, 'O': -0.8132},
-    'CTHR': {'N': -0.3821, 'CA': -0.242, 'C': 0.781, 'O': -0.8044},
-    'CTRP': {'N': -0.3821, 'CA': -0.2084, 'C': 0.7658, 'O': -0.8011},
-    'CTYR': {'N': -0.3821, 'CA': -0.2015, 'C': 0.7817, 'O': -0.807},
-    'CVAL': {'N': -0.3821, 'CA': -0.3438, 'C': 0.835, 'O': -0.8173},
-    'NHE': {'N': -0.463},
-    'NME': {'N': -0.4157, 'C': -0.149},
-    'ACE': {'C': 0.5972, 'O': -0.5679},
-    'NALA': {'N': 0.1414, 'CA': 0.0962, 'C': 0.6163, 'O': -0.5722},
-    'NARG': {'N': 0.1305, 'CA': -0.0223, 'C': 0.7214, 'O': -0.6013},
-    'NASN': {'N': 0.1801, 'CA': 0.0368, 'C': 0.6163, 'O': -0.5722},
-    'NASP': {'N': 0.0782, 'CA': 0.0292, 'C': 0.5621, 'O': -0.5889},
-    'NCYS': {'N': 0.1325, 'CA': 0.0927, 'C': 0.6123, 'O': -0.5713},
-    'NCYX': {'N': 0.2069, 'CA': 0.1055, 'C': 0.6123, 'O': -0.5713},
-    'NGLN': {'N': 0.1493, 'CA': 0.0536, 'C': 0.6123, 'O': -0.5713},
-    'NGLU': {'N': 0.0017, 'CA': 0.0588, 'C': 0.5621, 'O': -0.5889},
-    'NGLY': {'N': 0.2943, 'CA': -0.01, 'C': 0.6163, 'O': -0.5722},
-    'NHID': {'N': 0.1542, 'CA': 0.0964, 'C': 0.6123, 'O': -0.5713},
-    'NHIE': {'N': 0.1472, 'CA': 0.0236, 'C': 0.6123, 'O': -0.5713},
-    'NHIP': {'N': 0.256, 'CA': 0.0581, 'C': 0.7214, 'O': -0.6013},
-    'NILE': {'N': 0.0311, 'CA': 0.0257, 'C': 0.6123, 'O': -0.5713},
-    'NLEU': {'N': 0.101, 'CA': 0.0104, 'C': 0.6123, 'O': -0.5713},
-    'NLYS': {'N': 0.0966, 'CA': -0.0015, 'C': 0.7214, 'O': -0.6013},
-    'NMET': {'N': 0.1592, 'CA': 0.0221, 'C': 0.6123, 'O': -0.5713},
-    'NPHE': {'N': 0.1737, 'CA': 0.0733, 'C': 0.6123, 'O': -0.5713},
-    'NPRO': {'N': -0.202, 'CA': 0.1, 'C': 0.526, 'O': -0.5},
-    'NSER': {'N': 0.1849, 'CA': 0.0567, 'C': 0.6163, 'O': -0.5722},
-    'NTHR': {'N': 0.1812, 'CA': 0.0034, 'C': 0.6163, 'O': -0.5722},
-    'NTRP': {'N': 0.1913, 'CA': 0.0421, 'C': 0.6123, 'O': -0.5713},
-    'NTYR': {'N': 0.194, 'CA': 0.057, 'C': 0.6123, 'O': -0.5713},
-    'NVAL': {'N': 0.0577, 'CA': -0.0054, 'C': 0.6163, 'O': -0.5722}}
+    'A': {'P': 1.1662, 'OP1': -0.776, 'OP2': -0.776, "O5'": -0.4989, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.5246},
+    'A3': {'P': 1.1662, 'OP1': -0.776, 'OP2': -0.776, "O5'": -0.4989, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.6541},
+    'A5': {"O5'": -0.6223, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.5246},
+    'AN': {"O5'": -0.6223, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.6541},
+    'C': {'P': 1.1662, 'OP1': -0.776, 'OP2': -0.776, "O5'": -0.4989, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.5246},
+    'C3': {'P': 1.1662, 'OP1': -0.776, 'OP2': -0.776, "O5'": -0.4989, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.6541},
+    'C5': {"O5'": -0.6223, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.5246},
+    'CN': {"O5'": -0.6223, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.6541},
+    'G': {'P': 1.1662, 'OP1': -0.776, 'OP2': -0.776, "O5'": -0.4989, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.5246},
+    'G3': {'P': 1.1662, 'OP1': -0.776, 'OP2': -0.776, "O5'": -0.4989, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.6541},
+    'G5': {"O5'": -0.6223, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.5246},
+    'GN': {"O5'": -0.6223, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.6541},
+    'OHE': {'HOP3': 0.3129, 'OP3': -0.621},
+    'U': {'P': 1.1662, 'OP1': -0.776, 'OP2': -0.776, "O5'": -0.4989, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.5246},
+    'RA': {'P': 1.1662, "O5'": -0.4989, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.5246},
+    'RA3': {'P': 1.1662, "O5'": -0.4989, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.6541},
+    'RA5': {"O5'": -0.6223, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.5246},
+    'RC': {'P': 1.1662, "O5'": -0.4989, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.5246},
+    'RC3': {'P': 1.1662, "O5'": -0.4989, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.6541},
+    'RC5': {"O5'": -0.6223, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.5246},
+    'RG': {'P': 1.1662, "O5'": -0.4989, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.5246},
+    'RG3': {'P': 1.1662, "O5'": -0.4989, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.6541},
+    'RG5': {"O5'": -0.6223, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.5246},
+    'RU': {'P': 1.1662, "O5'": -0.4989, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.5246},
+    'RU3': {'P': 1.1662, "O5'": -0.4989, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.6541},
+    'RU5': {"O5'": -0.6223, "C5'": 0.0558, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "O3'": -0.5246},
+    'U3': {'P': 1.1662, 'OP1': -0.776, 'OP2': -0.776, "O5'": -0.4989, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.6541},
+    'U5': {"O5'": -0.6223, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.5246},
+    'UN': {"O5'": -0.6223, "C5'": 0.0558, "H5'": 0.0679, "H5''": 0.0679, "C4'": 0.1065, "H4'": 0.1174, "O4'": -0.3548, "C3'": 0.2022, "H3'": 0.0615, "C2'": 0.067, "H2'": 0.0972, "O3'": -0.6541},
+    'DA': {'P': 1.1659, 'OP1': -0.7761, 'OP2': -0.7761, "O5'": -0.4954, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.5232},
+    'DA3': {'P': 1.1659, 'OP1': -0.7761, 'OP2': -0.7761, "O5'": -0.4954, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.6549},
+    'DA5': {"O5'": -0.6318, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.5232},
+    'DAN': {"O5'": -0.6318, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.6549},
+    'DC': {'P': 1.1659, 'OP1': -0.7761, 'OP2': -0.7761, "O5'": -0.4954, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.5232},
+    'DC3': {'P': 1.1659, 'OP1': -0.7761, 'OP2': -0.7761, "O5'": -0.4954, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.6549},
+    'DC5': {"O5'": -0.6318, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.5232},
+    'DCN': {"O5'": -0.6318, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.6549},
+    'DG': {'P': 1.1659, 'OP1': -0.7761, 'OP2': -0.7761, "O5'": -0.4954, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.5232},
+    'DG3': {'P': 1.1659, 'OP1': -0.7761, 'OP2': -0.7761, "O5'": -0.4954, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.6549},
+    'DG5': {"O5'": -0.6318, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.5232},
+    'DGN': {"O5'": -0.6318, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.6549},
+    'DT': {'P': 1.1659, 'OP1': -0.7761, 'OP2': -0.7761, "O5'": -0.4954, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.5232},
+    'DT3': {'P': 1.1659, 'OP1': -0.7761, 'OP2': -0.7761, "O5'": -0.4954, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.6549},
+    'DT5': {"O5'": -0.6318, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.5232},
+    'DTN': {"O5'": -0.6318, "C5'": -0.0069, "H5'": 0.0754, "H5''": 0.0754, "C4'": 0.1629, "H4'": 0.1176, "O4'": -0.3691, "C3'": 0.0713, "H3'": 0.0985, "C2'": -0.0854, "H2'": 0.0718, "H2''": 0.0718, "O3'": -0.6549}}
 
 #Read the fixed charges file 
-def read_fixed_charges_file(filename, terminal_info_file='terminal_info.dat'):
-    # Read terminal info
-    terminal_lookup = {}
-    try:
-        with open(terminal_info_file, 'r') as f:
-            for line in f:
-                parts = line.strip().split()
-                if len(parts) == 3:
-                    chain_id = parts[0]
-                    resnum = int(parts[1])
-                    terminal_type = parts[2]
-                    terminal_lookup[resnum] = terminal_type
-    except FileNotFoundError:
-        print(f"Warning: {terminal_info_file} not found. No terminal info available.")
-
-    # Read fixed charges
+def read_fixed_charges_file(filename):
     fixed_charges_map = {}
+
     try:
         with open(filename, 'r') as f:
             for line in f:
                 parts = line.strip().split()
+
+                # Expect: atom_id, atom_name_ref, atom_name_out, residue_name
                 if len(parts) >= 4:
                     atom_id = int(parts[0])
-                    atom_name_ref = parts[1]
-                    atom_name_out = parts[2]
+                    atom_name_ref = parts[1]    # Reference name for lookup (e.g., "O3'")
+                    atom_name_out = parts[2]    # Name in MOL2 file (e.g., "O2")
                     residue_name = parts[3]
 
+                    # Map (atom_id, atom_name_out) -> (atom_name_ref, residue_name)
+                    # This allows us to look up using the MOL2 name and get the reference name
                     fixed_charges_map[(atom_id, atom_name_out)] = (atom_name_ref, residue_name)
 
     except FileNotFoundError:
         print(f"Warning: {filename} not found. Proceeding without fixed charges.")
-        return {}, terminal_lookup
+        return {}
 
-    return fixed_charges_map, terminal_lookup
+    return fixed_charges_map
 
 #Process charges while using reference charges from get_default_reference_charges for N, C, O and CA atoms.
-def process_charges(processed_charges_file, mol2_file, target_charge, coordinated_residues, fixed_charges_file):
+def process_charges(processed_charges_file, mol2_file, target_charge, coordinated_residues, fixed_charges_file, total_cap_charge=0.0):
+
     # Get reference charges
     reference_charges = get_default_reference_charges()
     
     # Read the fixed charges file
-    fixed_charges_map, terminal_lookup = read_fixed_charges_file(fixed_charges_file)
- 
+    # Now returns: (atom_id, atom_name_out) -> (atom_name_ref, residue_name)
+    fixed_charges_map = read_fixed_charges_file(fixed_charges_file)
+    target_charge = target_charge - total_cap_charge 
     # Read the original charges
     with open(processed_charges_file, 'r') as f:
         charges = [float(line.strip()) for line in f]
@@ -939,37 +686,30 @@ def process_charges(processed_charges_file, mol2_file, target_charge, coordinate
                 parts = line.split()
                 if len(parts) >= 9:
                     mol2_atom_id = int(parts[0])
-                    atom_type = parts[5]
+                    atom_type = parts[5]       # This is atom_name_out in MOL2
                     residue_name = parts[7]
-                    residue_number = int(parts[6])  # Get residue number from MOL2
-                
+                    
                     # Store atom information
                     mol2_atoms.append({
                         'index': atom_index,
                         'id': mol2_atom_id,
                         'type': atom_type,
-                        'residue': residue_name,
-                        'resnum': residue_number
-
+                        'residue': residue_name
                     })
                     
                     # Check if this atom should have a reference charge
+                    # Look up using (mol2_atom_id, atom_type) where atom_type is from MOL2
                     key = (mol2_atom_id, atom_type)
+                    
                     if key in fixed_charges_map:
+                        # Get the reference name and residue for charge lookup
                         atom_name_ref, ref_residue = fixed_charges_map[key]
                         
-                        # Check if this residue is a terminal
-                        lookup_residue = ref_residue
-                        if residue_number in terminal_lookup:
-                            terminal_type = terminal_lookup[residue_number]
-                            # Add N or C prefix for terminal lookup
-                            lookup_residue = ('N' if terminal_type == 'NTERM' else 'C') + ref_residue
-                        
-                        # Look up charge using terminal-aware residue name
-                        if lookup_residue in reference_charges and atom_name_ref in reference_charges[lookup_residue]:
-                            new_charges[atom_index] = reference_charges[lookup_residue][atom_name_ref]
+                        # Now look up the charge using atom_name_ref
+                        if ref_residue in reference_charges and atom_name_ref in reference_charges[ref_residue]:
+                            new_charges[atom_index] = reference_charges[ref_residue][atom_name_ref]
                             fixed_indices.add(atom_index)
-
+                    
                     atom_index += 1
     
     # Calculate total fixed charge after applying reference charges
@@ -995,6 +735,7 @@ def process_charges(processed_charges_file, mol2_file, target_charge, coordinate
                       coordinated_residues)
     
     return new_charges
+
 #Write detailed charge information to files
 def write_charge_files(original_charges, new_charges, total_number_atoms, 
                       total_selected_charges, target_charge, right_charge,
@@ -1111,12 +852,12 @@ def main():
     args = parser.parse_args()
 
     try:
-        metal_sites, coordinated_residues, terminal_info = analyze_and_extract_metal_site(
+        metal_sites, coordinated_residues, total_cap_charge = analyze_and_extract_metal_site(
             args.pdb_file,
             mol2_file=args.mol2_file,
         )
         
-        process_charges('processed_charges.dat', args.mol2_file, args.target_charge, coordinated_residues, fixed_charges_file="fixed_charges.dat") 
+        process_charges('processed_charges.dat', args.mol2_file, args.target_charge, coordinated_residues, fixed_charges_file="fixed_charges.dat", total_cap_charge=total_cap_charge) 
         # Update MOL2 file with new charges
         update_mol2_file(args.mol2_file, 'recalculated_charges.dat', 'updated_easy_COMPLEX.mol2')
         

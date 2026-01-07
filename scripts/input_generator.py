@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.15 - 17 October 2025                                #
+#                              |  $$$$$$/              Ver. 4.20 - 1 January 2026                                 #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -200,12 +200,24 @@ def generate_input_for_easyparm(parameters):
     metalloprotein = get_param("METALLOPROTEIN", "no", required=False).lower()
     if metalloprotein in ['y', 'yes', 'true', '1']:
         inputs.append('y')
-        # Include PDB file if metalloprotein is yes
-        inputs.append(get_param("PDB_FILE", "protein.pdb"))
     else:
         inputs.append('n')
+    
+    # 9. METAL NUCLEIC ACID
+    metallonucleic = get_param("METALLONUCLEIC", "no", required=False).lower()
+    if metallonucleic in ['y', 'yes', 'true', '1']:
+        inputs.append('y')
+
+    else:
+        inputs.append('n')
+    
+    if metalloprotein in ['y', 'yes', 'true', '1'] or metallonucleic in ['y', 'yes', 'true', '1']:
         
-    # 9. RESID_ID
+        inputs.append(get_param("PDB_FILE", "protein.pdb"))
+        # Include Force Field Type
+        inputs.append(get_param("FF_TYPE", "1"))
+
+    # 10. RESID_ID
     resid_id = get_param("RESID_ID", "no", required=False).lower()
     if resid_id in ['y', 'yes', 'true', '1']:
         inputs.append('y')
@@ -213,14 +225,14 @@ def generate_input_for_easyparm(parameters):
     else:
         inputs.append('n')
     
-    # 10. CHARMM_FF
+    # 11. CHARMM_FF
     charmm_ff = get_param("CHARMM_FF", "no", required=False).lower()
     if charmm_ff in ['y', 'yes', 'true', '1']:
         inputs.append('y')
     else:
         inputs.append('n')
     
-    # 11. CHARGE_RESTRAIN
+    # 12. CHARGE_RESTRAIN
     charge_restrain = get_param("CHARGE_RESTRAIN", "no", required=False).lower()
     if charge_restrain in ['y', 'yes', 'true', '1']:
         inputs.append('y')
@@ -240,10 +252,10 @@ def generate_input_for_easyparm(parameters):
             missing_params.append("NUM_ATOMS (invalid integer value)")
             inputs.append("0")  # Default if num_atoms is invalid
             
-        # 12. REVIEW_CHARGES (always 'n')
+        # 12.1. REVIEW_CHARGES (always 'n')
         inputs.append('n')
     
-        # 13. CHARGE_FILE
+        # 12.2. CHARGE_FILE
         inputs.append(get_param("CHARGE_FILE", "output.vpot"))
     else:
         inputs.append('n')
@@ -287,7 +299,6 @@ def main():
         output_dir = os.path.dirname(output_path) if os.path.dirname(output_path) else "."
         generate_psi4_config(parameters, output_dir)
     
-    print(f"Main output file created: {output_path}")
     sys.exit(0)
 
 if __name__ == "__main__":

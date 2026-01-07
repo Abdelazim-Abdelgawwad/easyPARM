@@ -24,15 +24,12 @@ from Bio.PDB import PDBParser, NeighborSearch
 import numpy as np
 import os
 
-#Update atom types and charges in a MOL2 file based on a charge file.
 def update_mol2_file(input_mol2, charge_file, output_mol2=None):
     try:
-        # If no output file specified, generate one
         if output_mol2 is None:
             base, ext = os.path.splitext(input_mol2)
             output_mol2 = f"{os.path.basename(input_mol2)}"
 
-        # Read new atom charges and types
         new_data = {}
         with open(charge_file, 'r') as f:
             for index, line in enumerate(f, 1):
@@ -42,12 +39,10 @@ def update_mol2_file(input_mol2, charge_file, output_mol2=None):
                     atom_type = parts[1]
                     new_data[index] = {'charge': charge, 'atom_type': atom_type}
 
-        # Process MOL2 file
         updated_mol2_lines = []
         with open(input_mol2, 'r') as input_file:
             is_atom_section = False
             for line in input_file:
-                # Detect and modify the atom section
                 if line.startswith("@<TRIPOS>ATOM"):
                     is_atom_section = True
                     updated_mol2_lines.append(line)
@@ -58,7 +53,6 @@ def update_mol2_file(input_mol2, charge_file, output_mol2=None):
                     continue
 
                 if is_atom_section and line.strip():
-                    # Match MOL2 atom line format using regex
                     atom_match = re.match(
                         r"(\s*\d+\s+)(\S+\s+)(-?\d+\.\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+)(\S+\s+)(\d+\s+\S+\s+)(-?\d+\.\d+)",
                         line
@@ -67,7 +61,6 @@ def update_mol2_file(input_mol2, charge_file, output_mol2=None):
                         atom_id, atom_name, coords, old_atom_type, post_type, old_charge = atom_match.groups()
                         atom_index = int(atom_id.strip())
                         if atom_index in new_data:
-                            # Replace atom type and charge
                             new_atom_type = new_data[atom_index]['atom_type']
                             new_charge = new_data[atom_index]['charge']
                             updated_line = f"{atom_id}{atom_name}{coords}{new_atom_type:<11}{post_type}{new_charge:8.6f}\n"
@@ -79,7 +72,6 @@ def update_mol2_file(input_mol2, charge_file, output_mol2=None):
                 else:
                     updated_mol2_lines.append(line)
 
-        # Write the updated MOL2 content to the output file
         with open(output_mol2, 'w') as output_file:
             output_file.writelines(updated_mol2_lines)
 
@@ -95,7 +87,6 @@ def update_mol2_file(input_mol2, charge_file, output_mol2=None):
         print(f"Unexpected error occurred: {e}")
         raise
 
-#Batch update MOL2 files based on a mapping file.
 def batch_update_mol2_files(charges_mapping_file='charges_all.dat'):
     updated_files = []
     try:
@@ -115,32 +106,27 @@ def batch_update_mol2_files(charges_mapping_file='charges_all.dat'):
 
     return updated_files
 
-#Extracts coordination information for standard protein residues linked to metals
-#and their specific peptide bond connections.
 def generate_standard_residue_coordination(input_pdb, output_file="coordinated_residues.txt",
                                            standard_residues=None,
                                            metals=None,
                                            distance_cutoff=2.5,
-                                           bond_cutoff=1.9):
-    # Default standard residues
+                                           bond_cutoff=1.75):
     if standard_residues is None:
         standard_residues = {
-            # Base residues
-            "ALA", "ARG", "ASH", "ASN", "ASP", "CYM", "CYS", "CYX", "GLH", "GLN",
-            "GLU", "GLY", "HID", "HIE", "HIP", "HYP", "ILE", "LEU", "LYN", "LYS",
-            "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", "NHE", "NME",
-            "ACE",
-            # N-terminal variants
-            "NALA", "NARG", "NASH", "NASN", "NASP", "NCYM", "NCYS", "NCYX", "NGLH", "NGLN",
-            "NGLU", "NGLY", "NHID", "NHIE", "NHIP", "NHYP", "NILE", "NLEU", "NLYN", "NLYS",
-            "NMET", "NPHE", "NPRO", "NSER", "NTHR", "NTRP", "NTYR", "NVAL", 
-            # C-terminal variants
-            "CALA", "CARG", "CASH", "CASN", "CASP", "CCYM", "CCYS", "CCYX", "CGLH", "CGLN",
-            "CGLU", "CGLY", "CHID", "CHIE", "CHIP", "CHYP", "CILE", "CLEU", "CLYN", "CLYS",
-            "CMET", "CPHE", "CPRO", "CSER", "CTHR", "CTRP", "CTYR", "CVAL"
+            "DA", "DT", "DC", "DG", "DU",
+            # RNA
+            "A", "U", "C", "G",
+            # Additional AMBER nucleic acid residues
+            "RA", "RU", "RC", "RG",  # RNA
+            "DAN", "DTN", "DCN", "DGN",  # Deoxy forms
+            "A3", "A5", "AN", "C3", "C5", "CN",  # 3' and 5' terminal
+            "G3", "G5", "GN", "U3", "U5", "UN",
+            "DA3", "DA5", "DAN", "DC3", "DC5", "DCN",
+            "DG3", "DG5", "DGN", "DT3", "DT5", "DTN",
+            "OHE", "ADE", "GUA", "CYT", "THY", "URA",
+            "RA3", "RA5", "RU3", "RU5", "RG3", "RG5", "RC3", "RC5"
         }
 
-    # Default metals to check
     if metals is None:
         metals = [
             'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag',
@@ -152,17 +138,13 @@ def generate_standard_residue_coordination(input_pdb, output_file="coordinated_r
         ]
 
     parser = PDBParser(QUIET=True)
-    structure = parser.get_structure("protein", input_pdb)
+    structure = parser.get_structure("nucleic_acid", input_pdb)
     coordination_data = []
-    peptide_bond_data = []
+    phosphodiester_bond_data = []
     nonstandard_standard_bond_data = []
 
-    # Sets to store residue numbers for tracking
     metal_coordinated_residues = set()
     standard_residues_to_process = set()
-
-    # Check if PDB was loaded correctly
-    model_count = len(list(structure.get_models()))
 
     metal_atoms_found = []
     nonstandard_residues_found = set()
@@ -185,7 +167,6 @@ def generate_standard_residue_coordination(input_pdb, output_file="coordinated_r
                 for atom in residue:
                     atom_name = atom.get_name()
 
-                    # Check if atom is a metal
                     is_metal = False
                     for metal in metals:
                         if atom_name == metal or (atom_name.startswith(metal) and atom_name[len(metal):].isdigit()):
@@ -199,15 +180,18 @@ def generate_standard_residue_coordination(input_pdb, output_file="coordinated_r
                             'residue': residue,
                             'res_name': res_name,
                             'res_id': res_id,
+                            'chain_id': chain.get_id(),
                             'position': atom.coord
                         })
                         metal_atoms_found.append(f"{atom_name} in {res_name}:{res_id}")
 
     # Step 2: Find standard residues coordinated to metals
+    coordination_count = 0
     for metal_info in metal_atoms:
         metal_atom = metal_info['atom']
         metal_name = metal_info['name']
         metal_res_id = metal_info['res_id']
+        metal_res_name = metal_info['res_name']
         metal_position = metal_info['position']
 
         for model in structure:
@@ -215,16 +199,17 @@ def generate_standard_residue_coordination(input_pdb, output_file="coordinated_r
                 for residue in chain:
                     if residue.get_resname() in standard_residues:
                         res_id = residue.get_id()[1]
+                        res_name = residue.get_resname()
 
-                        # Skip if this is the same residue as the metal (should not happen with standard residues)
-                        if res_id == metal_res_id:
+                        # Don't skip same residue ID if metal is in non-standard residue
+                        # Only skip if metal is in a standard residue and it's the same residue
+                        if metal_res_name in standard_residues and res_id == metal_res_id:
                             continue
 
                         for atom in residue:
                             distance = np.linalg.norm(metal_position - atom.coord)
 
                             if distance <= distance_cutoff:
-
                                 metal_coordinated_residues.add(res_id)
                                 standard_residues_to_process.add(res_id)
 
@@ -232,27 +217,26 @@ def generate_standard_residue_coordination(input_pdb, output_file="coordinated_r
                                     f"bond PRO.{metal_res_id}.{metal_name} "
                                     f"PRO.{res_id}.{atom.get_name()}"
                                 )
+                                coordination_count += 1
 
     # Step 3: Find non-standard residues containing metals
-    metal_containing_nonstandard = {}  # Maps residue ID to the metal info
+    metal_containing_nonstandard = {}
 
     for metal_info in metal_atoms:
         res_name = metal_info['res_name']
         res_id = metal_info['res_id']
 
-        # If this is a non-standard residue
         if res_name not in standard_residues:
             if res_id not in metal_containing_nonstandard:
                 metal_containing_nonstandard[res_id] = []
             metal_containing_nonstandard[res_id].append(metal_info)
 
     # Step 4: Find standard residues that bond with non-standard residues containing metals
-    # Collect all heavy atoms from standard residues and non-standard residues with metals
     standard_heavy_atoms = []
-    standard_atom_info = {}  # Maps atom to (res_id, atom_name)
+    standard_atom_info = {}
 
     nonstandard_heavy_atoms = []
-    nonstandard_atom_info = {}  # Maps atom to (res_id, atom_name)
+    nonstandard_atom_info = {}
 
     for model in structure:
         for chain in model:
@@ -260,33 +244,29 @@ def generate_standard_residue_coordination(input_pdb, output_file="coordinated_r
                 res_id = residue.get_id()[1]
                 res_name = residue.get_resname()
 
-                # If this is a standard residue
                 if res_name in standard_residues:
                     for atom in residue:
                         element = atom.element if hasattr(atom, 'element') else atom.get_name()[0]
-                        if element != 'H':  # Only heavy atoms
+                        if element != 'H':
                             standard_heavy_atoms.append(atom)
                             standard_atom_info[atom] = (res_id, atom.get_name())
 
-                # If this is a non-standard residue with a metal
                 elif res_id in metal_containing_nonstandard:
                     for atom in residue:
-                        # Skip the metal atoms themselves
                         is_metal_atom = False
                         for metal_info in metal_containing_nonstandard[res_id]:
                             if atom == metal_info['atom']:
                                 is_metal_atom = True
                                 break
 
-                        if not is_metal_atom:  # Only include non-metal atoms
+                        if not is_metal_atom:
                             element = atom.element if hasattr(atom, 'element') else atom.get_name()[0]
-                            if element != 'H':  # Only heavy atoms
+                            if element != 'H':
                                 nonstandard_heavy_atoms.append(atom)
                                 nonstandard_atom_info[atom] = (res_id, atom.get_name())
 
     # Find bonds between non-standard residues with metals and standard residues
     if nonstandard_heavy_atoms and standard_heavy_atoms:
-        # Create neighbor search for standard residue atoms
         ns = NeighborSearch(standard_heavy_atoms)
 
         nonstandard_residues_linked_to_standard = set()
@@ -294,105 +274,101 @@ def generate_standard_residue_coordination(input_pdb, output_file="coordinated_r
         for atom in nonstandard_heavy_atoms:
             nonstandard_res_id, atom_name = nonstandard_atom_info[atom]
 
-            # Find nearby standard residue atoms
             nearby_atoms = ns.search(atom.coord, bond_cutoff, level='A')
 
             for nearby_atom in nearby_atoms:
                 if nearby_atom in standard_atom_info:
                     standard_res_id, standard_atom_name = standard_atom_info[nearby_atom]
 
-
                     nonstandard_standard_bond_data.append(
                         f"bond PRO.{nonstandard_res_id}.{atom_name} "
                         f"PRO.{standard_res_id}.{standard_atom_name}"
                     )
 
-                    # Add this standard residue to the list to process for peptide bonds
                     standard_residues_to_process.add(standard_res_id)
                     nonstandard_residues_linked_to_standard.add(nonstandard_res_id)
-
-    # Step 5: Find peptide bonds using distance-based approach for standard residues
-    # that are either coordinated to metals or bonded to non-standard residues
-
-    # Collect backbone atoms (N and C) from standard residues that need peptide bond processing
+    # Step 5: Find phosphodiester bonds in nucleic acid backbone
     backbone_atoms = []
-    backbone_atom_info = {}  # Maps atom to (res_id, atom_name)
+    backbone_atom_info = {}
 
     for model in structure:
         for chain in model:
+            chain_id = chain.get_id()
             for residue in chain:
                 res_id = residue.get_id()[1]
                 res_name = residue.get_resname()
 
-                # Only process standard residues
                 if res_name in standard_residues:
                     for atom in residue:
                         atom_name = atom.get_name()
-                        # Only collect backbone N and C atoms
-                        if atom_name in ['N', 'C']:
+                        if atom_name in ["P", "O3'"]:
                             backbone_atoms.append(atom)
-                            backbone_atom_info[atom] = (res_id, atom_name)
+                            backbone_atom_info[atom] = (res_id, atom_name, chain_id)
 
-    # Use NeighborSearch to find peptide bonds based on distance
-    peptide_bonds_set = set()
+    phosphodiester_bonds_set = set()
 
     if backbone_atoms:
         ns_backbone = NeighborSearch(backbone_atoms)
 
         for atom in backbone_atoms:
-            res_id, atom_name = backbone_atom_info[atom]
+            res_id, atom_name, chain_id = backbone_atom_info[atom]
 
-            # Only process if this residue needs peptide bond information
             if res_id in standard_residues_to_process:
-                # Find nearby backbone atoms within bond distance
                 nearby_atoms = ns_backbone.search(atom.coord, bond_cutoff, level='A')
 
                 for nearby_atom in nearby_atoms:
                     if nearby_atom in backbone_atom_info:
-                        nearby_res_id, nearby_atom_name = backbone_atom_info[nearby_atom]
+                        nearby_res_id, nearby_atom_name, nearby_chain_id = backbone_atom_info[nearby_atom]
 
-                        # Check if this is a valid peptide bond (C to N connection)
-                        # and not the same residue
-                        if nearby_res_id != res_id:
-                            # Peptide bonds are C (of residue i) to N (of residue i+1)
-                            if (atom_name == 'C' and nearby_atom_name == 'N') or \
-                               (atom_name == 'N' and nearby_atom_name == 'C'):
-                                # Create canonical representation (always C before N)
-                                if atom_name == 'C':
-                                    bond = f"bond PRO.{res_id}.C PRO.{nearby_res_id}.N"
+                        if nearby_res_id != res_id and chain_id == nearby_chain_id:
+                            if (atom_name == "O3'" and nearby_atom_name == "P") or \
+                               (atom_name == "P" and nearby_atom_name == "O3'"):
+                                
+                                if atom_name == "O3'" and nearby_atom_name == "P":
+                                    if res_id < nearby_res_id:
+                                        bond = f"bond PRO.{res_id}.O3' PRO.{nearby_res_id}.P"
+                                    else:
+                                        bond = f"bond PRO.{nearby_res_id}.P PRO.{res_id}.O3'"
                                 else:
-                                    bond = f"bond PRO.{nearby_res_id}.C PRO.{res_id}.N"
+                                    if nearby_res_id < res_id:
+                                        bond = f"bond PRO.{nearby_res_id}.O3' PRO.{res_id}.P"
+                                    else:
+                                        bond = f"bond PRO.{res_id}.P PRO.{nearby_res_id}.O3'"
 
-                                # Only add if either residue is in our processing set
                                 if res_id in standard_residues_to_process or nearby_res_id in standard_residues_to_process:
-                                    peptide_bonds_set.add(bond)
+                                    phosphodiester_bonds_set.add(bond)
 
-    # Convert to list and add comment header
-    peptide_bond_data = [f"{bond}" for bond in sorted(peptide_bonds_set)]
-
+    phosphodiester_bond_data = [f"{bond}" for bond in sorted(phosphodiester_bonds_set)]
+    
     # Combine all data with proper section headers
     all_data = []
 
     if coordination_data:
-        all_data.append("# All bond information for tLeap input file")
-        all_data.append("# Metal-amino acid coordination bonds:")
+        if not all_data:  # Add header only once
+            all_data.append("# All bond information for tLeap input file")
+        all_data.append("# Metal-nucleotide coordination bonds:")
         all_data.extend(coordination_data)
         all_data.append("")
 
     if nonstandard_standard_bond_data:
-        all_data.append("# Ligand-amino acid covalent bonds:")
+        if not all_data:  # Add header only once
+            all_data.append("# All bond information for tLeap input file")
+        all_data.append("# Ligand-nucleotide covalent bonds:")
         all_data.extend(nonstandard_standard_bond_data)
         all_data.append("")
 
-    if peptide_bond_data:
-        all_data.append("# Peptide backbone bonds:")
-        all_data.extend(peptide_bond_data)
+    if phosphodiester_bond_data:
+        if not all_data:  # Add header only once
+            all_data.append("# All bond information for tLeap input file")
+        all_data.append("# Phosphodiester backbone bonds:")
+        all_data.extend(phosphodiester_bond_data)
 
+    # Write output if any data was found
     if all_data:
         with open(output_file, "w") as f:
             f.write("\n".join(all_data))
     else:
-        print("No coordination data found.")
+        print("\n=== No coordination data found ===")
 
 if __name__ == "__main__":
     input_pdb = "easyPARM.pdb"

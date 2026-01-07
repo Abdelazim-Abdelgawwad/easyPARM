@@ -19,9 +19,9 @@
 #Copyright 2024 Abdelazim M. A. Abdelgawwad, Universitat de València. E-mail: abdelazim.abdelgawwad@uv.es         #
 ###################################################################################################################
 
-
 import re
 import os
+import sys
 
 
 #Read metalloprotein_atomtype.dat file and return mapping from new_atom_type to original_atom_type
@@ -228,21 +228,32 @@ def update_complex_frcmod(frcmod_filename, new_to_original, original_to_new, pro
 
 
 def main():
+    # Check command line arguments
+    if len(sys.argv) != 2:
+        print("Usage: python3 code.py <parm_file>")
+        exit(1)
     
+    parm_type = sys.argv[1]
+    # Determine which parameter file to use based on argument
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    parm_file = os.path.join(script_dir, parm_type)
+
+    if not os.path.exists(parm_type):
+        print(f"Error: Parm file '{parm_type}' not found")
+        sys.exit(1)
+     
     atom_type_file = "metalloprotein_atomtype.dat"
     frcmod_file = "COMPLEX.frcmod"
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    protein_parm_file = os.path.join(script_dir, "protein_parm.dat")
- 
     # Read atom type mapping
     new_to_original, original_to_new = read_atom_type_mapping(atom_type_file)
     
     # Read protein parameter data
-    protein_bond_params, protein_angle_params = read_protein_parm_data(protein_parm_file)
+    protein_bond_params, protein_angle_params = read_protein_parm_data(parm_file)
     
     # Update complex frcmod file
     update_complex_frcmod(frcmod_file, new_to_original, original_to_new, protein_bond_params, protein_angle_params)
+    
     
 if __name__ == "__main__":
     main()

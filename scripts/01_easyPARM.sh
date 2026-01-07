@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.15 - 17 October 2025                                #
+#                              |  $$$$$$/              Ver. 4.20 - 1 January 2026                                 #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -949,35 +949,153 @@ for script in 03_correct_mol2.py correct_atom_type.py 04_parmch2_frcmod.sh; do
 done
 
 echo " "
+
+# Function to process metallonucleic with selected force field
+process_metallonucleic() {
+    local nucleic_ff=$1
+    
+    if [ ! -f "$SCRIPT_DIR/metallonucleic.py" ]; then
+        echo "Error: metallonucleic.py not found in $SCRIPT_DIR" >&2
+        return 1
+    fi
+    
+    case "$nucleic_ff" in
+        1) lib_file="DNA_BSC0.lib" ;;
+        2) lib_file="DNA_BSC1.lib" ;;
+        3) lib_file="DNA_OL15.lib" ;;
+        4) lib_file="DNA_OL21.lib" ;;
+        5) lib_file="DNA_OL24.lib" ;;
+        6) lib_file="RNA_OL3.lib" ;;
+        *) 
+            echo "Error: Invalid nucleic force field selection: $nucleic_ff" >&2
+            echo "Valid options are 1-6" >&2
+            return 1
+            ;;
+    esac
+    
+    python3 "$SCRIPT_DIR/metallonucleic.py" "$SCRIPT_DIR/libraries/$lib_file"
+    mv "$RUN_DIR/COMPLEX_updated.mol2" "$RUN_DIR/easyCOMPLEX.mol2"
+}
+
+# Function to process metalloprotein with selected force field
+process_metalloprotein() {
+    local protein_ff=$1
+
+    if [ ! -f "$SCRIPT_DIR/metalloprotein.py" ]; then
+        echo "Error: metalloprotein.py not found in $SCRIPT_DIR" >&2
+        return 1
+    fi
+
+    case "$protein_ff" in
+        1) lib_file="fb15.lib" ;;
+        2) lib_file="ff12SB.lib" ;;
+        3) lib_file="ff14SB.lib" ;;
+        4) lib_file="ff19SB.lib" ;;
+        *)
+            echo "Error: Invalid protein force field selection: $protein_ff" >&2
+            echo "Valid options are 1-4" >&2
+            return 1
+            ;;
+    esac
+
+    python3 "$SCRIPT_DIR/metalloprotein.py" "$SCRIPT_DIR/libraries/$lib_file"
+    mv "$RUN_DIR/COMPLEX_updated.mol2" "$RUN_DIR/easyCOMPLEX.mol2"
+}
+
 metalloprotein_choice=$(get_valid_input "Does your structure belong to MetalloProtein ? (y/n): " "y n yes no Y N YES NO Yes No")
-if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+echo " "
+metallonucleic_choice=$(get_valid_input "Does your structure belong to Metallonucleic acid ? (y/n): " "y n yes no Y N YES NO Yes No")
+
+if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+
     echo " "
     while true; do
-    	read -p "Please provide the metalloprotein pdb file: " protein_pdb
-    	if [ ! -f "$RUN_DIR/$protein_pdb" ]; then
-	    echo "Metalloprotein file not found in $RUN_DIR. Please check the file name and try again."
-            continue
-    	fi
-
-    	pdb4amber -i "$RUN_DIR/$protein_pdb" -o "$RUN_DIR/metalloprotein_easyPARM.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
     
     	cp "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/NEW_COMPLEX.mol2" 
-    	if [ -f "$SCRIPT_DIR/metalloprotein.py" ]; then
-        	python3 "$SCRIPT_DIR/metalloprotein.py" 
-    		mv "$RUN_DIR/COMPLEX_updated.mol2" "$RUN_DIR/easyCOMPLEX.mol2"
-    	else
-        	echo "Script metalloprotein.py not found in $SCRIPT_DIR. Exiting."
-        	exit 1
-    	fi
+    	if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+		
+		read -p "Please provide the metalloprotein pdb file: " protein_pdb
+	        
+		echo " "
+		echo "======================================================"
+		echo "        Protein Force Field Integration Menu"
+		echo "======================================================"
+		echo "Select the protein FF to be used for the metal-coordinated standard amino-acid residues"
+		echo " "
+		echo "1- fb15"
+		echo "2- ff12SB "
+		echo "3- ff14SB"
+		echo "4- ff19SB"
+		echo " "
+		protein_ff=$(get_valid_input "Enter your choice: " "1 2 3 4")
 
-    	# Check if the script was successful
-    	if [ $? -ne 0 ]; then
-        	echo "Failed to execute metalloprotein.py. Exiting."
-        	exit 1
+		if [ ! -f "$RUN_DIR/$protein_pdb" ]; then
+		    echo "Metalloprotein file not found in $RUN_DIR. Please check the file name and try again."
+		    continue
+		fi
+
+		pdb4amber -i "$RUN_DIR/$protein_pdb" -o "$RUN_DIR/metalloprotein_easyPARM.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
+		if [ -f "$SCRIPT_DIR/metalloprotein.py" ]; then
+			process_metalloprotein "$protein_ff"
+		else
+			echo "Script metalloprotein.py not found in $SCRIPT_DIR. Exiting."
+			exit 1
+		fi
+
+		# Check if the script was successful
+		if [ $? -ne 0 ]; then
+			echo "Failed to execute metalloprotein.py. Exiting."
+			exit 1
+		fi
     	fi
-    	mv "$RUN_DIR/easyCOMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
-    	python3 "$SCRIPT_DIR/distribute_metalloprotein_charge.py" "$RUN_DIR/$protein_pdb" "$RUN_DIR/COMPLEX_modified.mol2" $charge_total 
-    	mv "$RUN_DIR/updated_easy_COMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
+    	
+	if [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+		read -p "Please provide the metallonucleic acid pdb file: " nucleic_pdb
+	        echo " "
+		echo "======================================================"
+		echo "        DNA/RNA Force Field Integration Menu"
+		echo "======================================================"
+		echo "Select the DNA/RNA FF to be used for the metal-coordinated standard nucleobase residues"
+		echo " "
+		echo "1- DNA-BSC0"
+		echo "2- DNA-BSC1"
+		echo "3- DNA-OL15"
+		echo "4- DNA-OL21"
+		echo "5- DNA-OL24"
+		echo "6- RNA-OL3"
+		echo " "
+		nucleic_ff=$(get_valid_input "Enter your choice: " "1 2 3 4 5 6")
+		if [ ! -f "$RUN_DIR/$nucleic_pdb" ]; then
+		    echo "Metallonucleic acid file not found in $RUN_DIR. Please check the file name and try again."
+		    continue
+		fi
+
+		pdb4amber -i "$RUN_DIR/$nucleic_pdb" -o "$RUN_DIR/nucleic_acid_easyPARM.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
+		if [ -f "$SCRIPT_DIR/metallonucleic.py" ]; then
+			process_metallonucleic "$nucleic_ff" 
+		else
+			echo "Script metallonucleic.py not found in $SCRIPT_DIR. Exiting."
+			exit 1
+		fi
+
+		# Check if the script was successful
+		if [ $? -ne 0 ]; then
+			echo "Failed to execute metallonucleic.py. Exiting."
+			exit 1
+		fi
+    	fi
+    	
+	mv "$RUN_DIR/easyCOMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
+    	
+    	if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+	python3 "$SCRIPT_DIR/distribute_metalloprotein_charge.py" "$RUN_DIR/$protein_pdb" "$RUN_DIR/COMPLEX_modified.mol2" $charge_total 
+	fi 
+    	
+	if [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+	python3 "$SCRIPT_DIR/distribute_metallonucleic_charge.py" "$RUN_DIR/$nucleic_pdb" "$RUN_DIR/COMPLEX_modified.mol2" $charge_total 
+	fi 
+    	
+	mv "$RUN_DIR/updated_easy_COMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
     	break
     done
 else
@@ -1024,55 +1142,108 @@ fi
 
 
 echo " "
-if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
- 
-    cp "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/1COMPLEX.mol2"
-    if [ -f "$SCRIPT_DIR/metalloprotein.py" ]; then
-        python3 "$SCRIPT_DIR/metalloprotein.py" 
-    	mv "$RUN_DIR/COMPLEX_updated.mol2" "$RUN_DIR/easyCOMPLEX.mol2"
-    else
-        echo "Script metalloprotein.py not found in $SCRIPT_DIR. Exiting."
-        exit 1
-    fi
+if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
 
-    # Check if the script was successful
-    if [ $? -ne 0 ]; then
-        echo "Failed to execute metalloprotein.py. Exiting."
-        exit 1
-    fi
-   
-    python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/part_QM.xyz" "$RUN_DIR/part_QM.pdb"
-    python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/qm.xyz" "$RUN_DIR/qm.pdb"
+	cp "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/1COMPLEX.mol2"
+	if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+		if [ -f "$SCRIPT_DIR/metalloprotein.py" ]; then
+			process_metalloprotein "$protein_ff"
+		else
+			echo "Script metalloprotein.py not found in $SCRIPT_DIR. Exiting."
+			exit 1
+		fi
 
-    antechamber -i "$RUN_DIR/qm.pdb" -fi pdb -o "$RUN_DIR/QM.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
-  
-    sed -i'' '$d' "$RUN_DIR/nonstand.pdb"
-    cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/nonstand.pdb"
-    cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/easynonstands.pdb"
-    pdb4amber -i "$RUN_DIR/easynonstands.pdb" -o "$RUN_DIR/easyPARM.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
-     
-    input_file="$RUN_DIR/easyPARM_residues.dat"
+		# Check if the script was successful
+		if [ $? -ne 0 ]; then
+			echo "Failed to execute metalloprotein.py. Exiting."
+			exit 1
+		fi
+	fi
 
-    # Read each line from the input file
-    while IFS=' ' read -r pdbout mol2out residue_name; do
-    # Skip empty lines or lines starting with #
-    	if [[ -z "$pdbout" || "$pdbout" == \#* ]]; then
-        	continue
+	if [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+		if [ -f "$SCRIPT_DIR/metallonucleic.py" ]; then
+			process_metallonucleic "$nucleic_ff"
+		else
+			echo "Script metallonucleic.py not found in $SCRIPT_DIR. Exiting."
+			exit 1
+		fi
+
+		# Check if the script was successful
+		if [ $? -ne 0 ]; then
+			echo "Failed to execute metallonucleic.py. Exiting."
+			exit 1
+		fi
+	fi
+
+	python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/part_QM.xyz" "$RUN_DIR/part_QM.pdb"
+	python3 "$SCRIPT_DIR/xyz_to_pdb.py" "$RUN_DIR/qm.xyz" "$RUN_DIR/qm.pdb"
+
+	antechamber -i "$RUN_DIR/qm.pdb" -fi pdb -o "$RUN_DIR/QM.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no -j 5 > "$RUN_DIR/temp.dat" 2>&1
+	cp "$RUN_DIR/COMPLEX.pdb" "$RUN_DIR/backupCOMPLEX.pdb"
+	cp "$RUN_DIR/qm.pdb" "$RUN_DIR/COMPLEX.pdb"
+	cp "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/backupCOMPLEX.mol2"
+	cp "$RUN_DIR/QM.mol2" "$RUN_DIR/COMPLEX.mol2"
+	
+	if [ -f "$RUN_DIR/limited_data.dat" ]; then
+		rm -f "$RUN_DIR/limited_data.dat" 
+	fi
+    
+	if [ -f "$RUN_DIR/line_number.dat" ]; then
+		rm -f "$RUN_DIR/line_number.dat" 
+	fi
+	
+	python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
+	if [ ! -f "$RUN_DIR/limited_data.dat" ]; then
+            python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
+            antechamber -i "$RUN_DIR/mol.pdb" -fi pdb -o "$RUN_DIR/ONE.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
+            python3 "$SCRIPT_DIR/Revise_Atom_Type.py" > "$RUN_DIR/temp.dat"
+            if [ -f "$RUN_DIR/ONE.mol2" ]; then
+                mv "$RUN_DIR/COMPLEX_modified.mol2" "$RUN_DIR/QM.mol2"
+            fi
+	    antechamber -i "$RUN_DIR/COMPLEX.pdb" -fi pdb -o "$RUN_DIR/ONE2.mol2" -fo mol2 -s 2 -rn mol -nc "$charge_total" -m "$multi_total" -at "$at_type" -dr no > "$RUN_DIR/temp.dat" 2>&1
+	    if [ -f "$RUN_DIR/ONE2.mol2" ]; then
+		    cp "$RUN_DIR/ONE2.mol2" "$RUN_DIR/QM.mol2"
+            fi
+    	else 
+        	break 
     	fi
     
-    # Run the antechamber command
-    	antechamber -i "$pdbout" -fi pdb -o "$mol2out" -fo mol2 -s 2 -rn "$residue_name"  
-    done < "$input_file" > "$RUN_DIR/temp.dat" 2>&1
+       	mv "$RUN_DIR/backupCOMPLEX.pdb" "$RUN_DIR/COMPLEX.pdb"
+	mv "$RUN_DIR/backupCOMPLEX.mol2" "$RUN_DIR/COMPLEX.mol2"
+    
+    	sed -i'' '$d' "$RUN_DIR/nonstand.pdb"
+    	cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/nonstand.pdb"
+    	cat "$RUN_DIR/part_QM.pdb" >> "$RUN_DIR/easynonstands.pdb"
+    	pdb4amber -i "$RUN_DIR/easynonstands.pdb" -o "$RUN_DIR/easyPARM.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
+     
+    	input_file="$RUN_DIR/easyPARM_residues.dat"
+
+    	# Read each line from the input file
+    	while IFS=' ' read -r pdbout mol2out residue_name; do
+    	# Skip empty lines or lines starting with #
+    		if [[ -z "$pdbout" || "$pdbout" == \#* ]]; then
+        		continue
+    		fi
+    
+    	# Run the antechamber command
+    		antechamber -i "$pdbout" -fi pdb -o "$mol2out" -fo mol2 -s 2 -rn "$residue_name"  
+   	done < "$input_file" > "$RUN_DIR/temp.dat" 2>&1
 
      
-    python3 "$SCRIPT_DIR/update_metalloprotein_charge.py" 
-    cp "$RUN_DIR/QM.mol2" "$RUN_DIR/COMPLEX.mol2"
-    python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/qm.xyz"
-    python3 "$SCRIPT_DIR/03_correct_mol2.py" 
-    mv "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/QM.mol2"
-    mv "$RUN_DIR/1COMPLEX.mol2" "$RUN_DIR/COMPLEX.mol2"
-    mv "$RUN_DIR/easyCOMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
-    python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/$xyz_file"
+    	if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+		python3 "$SCRIPT_DIR/update_metalloprotein_charge.py" > "$RUN_DIR/temp.dat" 2>&1
+	fi 
+    	
+	if [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+		python3 "$SCRIPT_DIR/update_metalnucleicacid_charge.py" > "$RUN_DIR/temp.dat" 2>&1
+	fi 
+    	cp "$RUN_DIR/QM.mol2" "$RUN_DIR/COMPLEX.mol2"
+    	python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/qm.xyz"
+    	python3 "$SCRIPT_DIR/03_correct_mol2.py" 
+    	mv "$RUN_DIR/COMPLEX.mol2" "$RUN_DIR/QM.mol2"
+    	mv "$RUN_DIR/1COMPLEX.mol2" "$RUN_DIR/COMPLEX.mol2"
+    	mv "$RUN_DIR/easyCOMPLEX.mol2" "$RUN_DIR/COMPLEX_modified.mol2" 
+    	python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/$xyz_file"
 else
     :
 fi
@@ -1127,17 +1298,79 @@ next
 { print }' "$RUN_DIR/COMPLEX.frcmod" > "$RUN_DIR/temp.frcmod"
 mv "$RUN_DIR/temp.frcmod" "$RUN_DIR/COMPLEX.frcmod"
 
-resid_ID=$(get_valid_input "Would you like to change the residue ID (Default= mol)? (y/n): " "y n yes no Y N YES NO Yes No")
-    if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
-	    read -r -p "Please provide the residue name: " resid_name
-    fi
 
-if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
-    python3 "$SCRIPT_DIR/metalloprotein_parm.py" > "$RUN_DIR/temp.dat" 2>&1
+# Function to process metalloprotein parameters (frcmod)
+process_metalloprotein_parm() {
+    local protein_ff=$1
     
-    mv "$RUN_DIR/nonstand.pdb" "$RUN_DIR/easyPARM_MetalloProtein.pdb"
-    pdb4amber -i "$RUN_DIR/easyPARM_MetalloProtein.pdb" -o "$RUN_DIR/easyPARM_MetalloProtein2.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
-    mv "$RUN_DIR/easyPARM_MetalloProtein2.pdb" "$RUN_DIR/easyPARM_MetalloProtein.pdb" 
+    if [ ! -f "$SCRIPT_DIR/metalloprotein_parm.py" ]; then
+        echo "Error: metalloprotein_parm.py not found in $SCRIPT_DIR" >&2
+        return 1
+    fi
+    
+    case "$protein_ff" in
+        1) frcmod_file="fb15.frcmod" ;;
+        2) frcmod_file="ff12SB.frcmod" ;;
+        3) frcmod_file="ff14SB.frcmod" ;;
+        4) frcmod_file="ff19SB.frcmod" ;;
+        *) 
+            echo "Error: Invalid protein force field selection: $protein_ff" >&2
+            echo "Valid options are 1-4" >&2
+            return 1
+            ;;
+    esac
+    
+    python3 "$SCRIPT_DIR/metalloprotein_parm.py" "$SCRIPT_DIR/libraries/$frcmod_file" > "$RUN_DIR/temp.dat" 2>&1
+}
+
+# Function to process metallonucleic parameters (frcmod)
+process_metallonucleic_parm() {
+    local nucleic_ff=$1
+    
+    if [ ! -f "$SCRIPT_DIR/metalloprotein_parm.py" ]; then
+        echo "Error: metalloprotein_parm.py not found in $SCRIPT_DIR" >&2
+        return 1
+    fi
+    
+    case "$nucleic_ff" in
+        1) frcmod_file="DNA_BSC0.frcmod" ;;
+        2) frcmod_file="DNA_BSC1.frcmod" ;;
+        3) frcmod_file="DNA_OL15.frcmod" ;;
+        4) frcmod_file="DNA_OL21.frcmod" ;;
+        5) frcmod_file="DNA_OL24.frcmod" ;;
+        6) frcmod_file="RNA_OL3.frcmod" ;;
+        *) 
+            echo "Error: Invalid nucleic force field selection: $nucleic_ff" >&2
+            echo "Valid options are 1-6" >&2
+            return 1
+            ;;
+    esac
+    
+    python3 "$SCRIPT_DIR/metalloprotein_parm.py" "$SCRIPT_DIR/libraries/$frcmod_file" > "$RUN_DIR/temp.dat" 2>&1
+}
+
+resid_ID=$(get_valid_input "Would you like to change the residue ID (Default= mol)? (y/n): " "y n yes no Y N YES NO Yes No")
+if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
+    read -r -p "Please provide the residue name: " resid_name
+fi
+
+if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+
+    
+    if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+	    process_metalloprotein_parm "$protein_ff" 
+	    mv "$RUN_DIR/nonstand.pdb" "$RUN_DIR/easyPARM_MetalloProtein.pdb"
+	    pdb4amber -i "$RUN_DIR/easyPARM_MetalloProtein.pdb" -o "$RUN_DIR/easyPARM_MetalloProtein2.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
+	    mv "$RUN_DIR/easyPARM_MetalloProtein2.pdb" "$RUN_DIR/easyPARM_MetalloProtein.pdb" 
+    fi
+    if [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+	    process_metallonucleic_parm "$nucleic_ff" 
+
+	    mv "$RUN_DIR/nonstand.pdb" "$RUN_DIR/easyPARM_MetalloNucleic.pdb"
+	    pdb4amber -i "$RUN_DIR/easyPARM_MetalloNucleic.pdb" -o "$RUN_DIR/easyPARM_MetalloNucleic2.pdb"  > "$RUN_DIR/temp.dat" 2>&1 
+	    mv "$RUN_DIR/easyPARM_MetalloNucleic2.pdb" "$RUN_DIR/easyPARM_MetalloNucleic.pdb" 
+    fi 
+    
     mv "$RUN_DIR/QM.mol2" "$RUN_DIR/METAL.mol2"
     mv "$RUN_DIR/coordinated_residues.txt" "$RUN_DIR/Bond_Info.dat"
     echo "  "
@@ -1166,24 +1399,35 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 	    #mv "$RUN_DIR/COMPLEX.frcmod" "$RUN_DIR/easyPARM.frcmod"
 	    mv "$RUN_DIR/Bond_Info.dat" "$RUN_DIR/Bond_Info_${resid_name}.dat" 
 	    mv "$RUN_DIR/Hybridization_Info.dat" "$RUN_DIR/Hybridization_Info_${resid_name}.dat"
-	    mv "$RUN_DIR/easyPARM_MetalloProtein.pdb" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
+	    if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+		    mv "$RUN_DIR/easyPARM_MetalloProtein.pdb" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
+		    sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
+	    fi
+	    if [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+	    	mv "$RUN_DIR/easyPARM_MetalloNucleic.pdb" "$RUN_DIR/easyPARM_MetalloNucleic_${resid_name}.pdb"
+		sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/easyPARM_MetalloNucleic_${resid_name}.pdb"
+	    fi
 	    cp "$RUN_DIR/METAL.mol2" "$RUN_DIR/${resid_name}.mol2"
 	    sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/${resid_name}.mol2"
-	    sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/easyPARM_MetalloProtein_${resid_name}.pdb"
 
 	    echo "Mol2  		    	  : ${resid_name}.mol2"
 	    echo "Frcmod                    : COMPLEX_${resid_name}.frcmod"
 	    echo "Bond Information          : Bond_Info_${resid_name}.dat"
 	    echo "Lib    		    	  : COMPLEX.lib"
 	    echo "New Atom Type             : Hybridization_Info_${resid_name}.dat"
-	    echo "MetalloProtein pdb        : easyPARM_MetalloProtein_${resid_name}.pdb"
+	    if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+		    echo "MetalloProtein pdb        : easyPARM_MetalloProtein_${resid_name}.pdb"
+	    fi
+	    if [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+		    echo "MetalloProtein pdb        : easyPARM_MetalloNucleic_${resid_name}.pdb"
+	    fi
     else
-	    echo "Mol2                            : METAL.mol2"
-	    echo "Bond Information        : Bond_Info.dat"
-	    echo "Frcmod                    : COMPLEX.frcmod"
-	    echo "New Atom Type           : Hybridization_Info.dat"
-	    echo "Lib    		: COMPLEX.lib"
-	    echo "MetalloProtein pdb        : easyPARM_MetalloProtein.pdb"
+	    echo "Mol2                          : METAL.mol2"
+	    echo "Bond Information        	: Bond_Info.dat"
+	    echo "Frcmod                  	: COMPLEX.frcmod"
+	    echo "New Atom Type           	: Hybridization_Info.dat"
+	    echo "Lib    			: COMPLEX.lib"
+	    echo "MetalloProtein pdb        	: easyPARM_MetalloProtein.pdb"
     fi
 else 
     	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
@@ -1204,7 +1448,7 @@ else
 
 fi	
 
-if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
+if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
         # run for only the small residue 
 	python3 "$SCRIPT_DIR/02_get_bond_angle.py" "$RUN_DIR/part_QM.xyz"
 
@@ -1266,20 +1510,21 @@ if [[ "${charmm_FF,,}" =~ ^(y|yes)$ ]] && [[ "${metalloprotein_choice,,}" =~ ^(n
 fi
 
 
-if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
-	rm COMPLEX.mol2
-	rm COMPLEX.pdb	
-	rm metalloprotein_easyPARM_*
-	rm *_renum.txt
-	rm *_sslink
-	rm *_nonprot.pdb
-	rm charge_*.dat
-	rm recalculated_charges.dat
-	rm processed_charges.dat
-	rm original_charges.dat
-	rm coordination_analysis.txt
-	rm charge_statistics.txt	
-	rm fixed_charges.dat
+if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+	rm -f COMPLEX.mol2
+	rm -f COMPLEX.pdb	
+	rm -f metalloprotein_easyPARM_*
+	rm -f metallonucleic_easyPARM_*
+	rm -f *_renum.txt
+	rm -f *_sslink
+	rm -f *_nonprot.pdb
+	rm -f charge_*.dat
+	rm -f recalculated_charges.dat
+	rm -f processed_charges.dat
+	rm -f original_charges.dat
+	rm -f coordination_analysis.txt
+	rm -f charge_statistics.txt	
+	rm -f fixed_charges.dat
 		
 fi
 # Remove the unnecessary file
@@ -1667,7 +1912,7 @@ else
 
 fi
 
-files_to_remove=( "similar.dat" "input_library.tleap" "distance_type.dat" "tempz.fchk" "atomic_number.dat" "charges.dat"  "bond_angle_dihedral_data.dat" "forcefield.dat" "ONE2.mol2" "psi4.config" "charges.chg" "qm.pdb" "qm.xyz")
+files_to_remove=( "similar.dat" "input_library.tleap" "distance_type.dat" "tempz.fchk" "atomic_number.dat" "charges.dat"  "bond_angle_dihedral_data.dat" "forcefield.dat" "ONE2.mol2" "psi4.config" "charges.chg" "qm.pdb" "qm.xyz" "esp.chg" "resp.out" "esp.in" "resp.in" "nucleic_acid_easyPARM.pdb" )
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
