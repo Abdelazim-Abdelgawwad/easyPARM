@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.15 - 17 October 2025                                #
+#                              |  $$$$$$/              Ver. 4.20 - 1 January 2026                                 #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -26,8 +26,7 @@ CYAN='\033[0;36m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
-# Clear screen
-clear
+
 # Print without string interpolation
 echo -e "${PURPLE}════════════════════════════════════════════════════════════════════════${NC}"
 echo -e "${CYAN}
@@ -39,7 +38,7 @@ echo -e "${CYAN}
 ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝${NC}"
 echo -e "${GREEN}                ⚡ Automated Force Fields for Metals ⚡${NC}"
 echo -e "${PURPLE}════════════════════════════════════════════════════════════════════════${NC}"
-echo -e "                     ${YELLOW}Version 4.15 — October 2025${NC}"
+echo -e "                     ${YELLOW}Version 4.20 — January 2026${NC}"
 echo -e "${PURPLE}════════════════════════════════════════════════════════════════════════${NC}"
 
 
@@ -105,13 +104,16 @@ else
     echo "Select your option:"
     echo "1- Generate molecular complex parameters"
     echo "2- Generate metalloprotein .xyz structure"
-    echo "3- Convert AMBER parameters to OpenMM or GROMACS format"
-    choice=$(get_valid_input "Enter your choice: " "1 2 3")
+    echo "3- Generate metal–nucleic acid system .xyz structure"
+    echo "4- Convert AMBER parameters to OpenMM or GROMACS format"
+    choice=$(get_valid_input "Enter your choice: " "1 2 3 4")
     if [ "$choice" = "1" ]; then
         ./01_easyPARM.sh "$ORIGINAL_DIR"
     elif [ "$choice" = "2" ]; then
-        ./extract_metal_coordination.sh "$ORIGINAL_DIR"
+        ./extract_metal_coordination.sh "$ORIGINAL_DIR" 1
     elif [ "$choice" = "3" ]; then
+        ./extract_metal_coordination.sh "$ORIGINAL_DIR" 2
+    elif [ "$choice" = "4" ]; then
         ./amber_converter.sh "$ORIGINAL_DIR"
     fi
 fi
