@@ -546,7 +546,8 @@ def extract_non_standard_residues_from_ref(ref_pdb, output_pdb="part_QM.pdb", ou
     with open(ref_pdb, 'r') as f:
         for line in f:
             if line.startswith(("ATOM", "HETATM")):
-                element = line[76:78].strip()
+                # Fix for issue 17 and 20
+                element = line.split()[-1]
                 resname = line[17:20].strip()
                 chain = line[21:22].strip()
                 resnum = int(line[22:26])
