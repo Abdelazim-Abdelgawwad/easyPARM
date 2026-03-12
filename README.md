@@ -1,3 +1,15 @@
+# easyPARM
+
+![Views](https://hits.sh/github.com/Abdelazim-Abdelgawwad/easyPARM.svg?style=for-the-badge&label=Views&color=2563eb&labelColor=1e3a8a)
+[![GitHub stars](https://img.shields.io/github/stars/Abdelazim-Abdelgawwad/easyPARM?style=for-the-badge&logo=github&color=f59e0b&labelColor=78350f)](https://github.com/Abdelazim-Abdelgawwad/easyPARM/stargazers)
+![GitHub forks](https://img.shields.io/github/forks/Abdelazim-Abdelgawwad/easyPARM?style=for-the-badge&color=f97316&labelColor=7c2d12)
+
+[![Citations JCTC 2024](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.juleskreuer.eu%2Fcitation-badge.php%3Fshield%26doi%3D10.1021%2Facs.jctc.4c01272&query=%24.message&style=for-the-badge&label=Citations%20JCTC%202024&color=16a34a&labelColor=14532d&logo=google-scholar&logoColor=white)](https://doi.org/10.1021/acs.jctc.4c01272)
+
+[![Citations JCP 2025](https://img.shields.io/badge/Citations%20JCP%202025-0-7c3aed?style=for-the-badge&logo=google-scholar&logoColor=white&labelColor=4c1d95)](https://doi.org/10.1063/5.0301038)
+
+----
+
 # 🚀 New Release: easyPARM v4.20
 
 We are pleased to announce **easyPARM v4.20**, a major update that significantly expands support for **metal–nucleic acid systems**, enhances **metalloprotein force-field flexibility**, and resolves several critical bugs in the parameterization workflow.
