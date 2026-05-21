@@ -28,8 +28,9 @@ This update improves the robustness of residue recognition, connectivity assignm
 ---
 
 ## ⚡ Automated `tleap` Input Generation
-
-The workflow is now fully automated for the generation of `tleap` input files.
+  *Special thanks to Deepak Patkar and Devashish Das for suggesting this important feature and workflow improvement.*
+  
+The workflow is now fully automated for the generation of `tleap` input files. 
 
 ### 🔧 Multiple Metal Centers
 
