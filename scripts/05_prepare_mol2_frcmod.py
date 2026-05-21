@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.20 - 1 January 2026                                 #
+#                              |  $$$$$$/              Ver. 4.25 - 19 May 2026                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -253,82 +253,104 @@ def update_mol2_file(atom_positions, mol2_file, new_file, metal_positions, bonds
     global used_atom_types
     used_atom_types.update(existing_types)
     
+    # Read capping link atoms if the file exists
+    # Format: "<atom_id> <element>"  e.g.  "43 C"  or  "66 N"
+    capping_link_atoms = {}
+    if os.path.exists('capping_link_atoms.dat'):
+        with open('capping_link_atoms.dat', 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) == 2:
+                    capping_atom_id  = int(parts[0])
+                    capping_element  = parts[1]          # "C" or "N"
+                    capping_link_atoms[capping_atom_id] = capping_element
+
     with open(mol2_file, 'r') as file:
         lines = file.readlines()
+
     # Find the start of atom and bond sections
     atom_start = lines.index("@<TRIPOS>ATOM\n")
     bond_start = lines.index("@<TRIPOS>BOND\n")
     atom_lines = lines[atom_start + 1:bond_start]
-    two_letter_counters = {}
-    updated_lines = []
-    new_atom_types = []
-    original_atom_types = []  # New list to store original atom types
-    atom_names = []  # New list to store atom names
-    
+
+    two_letter_counters  = {}
+    updated_lines        = []
+    new_atom_types       = []
+    original_atom_types  = []
+    atom_names           = []
+
     for line in atom_lines:
         parts = line.split()
         # Extract columns from the line
-        atom_id = int(parts[0])
+        atom_id   = int(parts[0])
         atom_name, x, y, z, atom_type, int_number, name, charge = parts[1:9]
         x, y, z, charge = map(float, (x, y, z, charge))
         int_number = int(int_number)
+
         # Normalize the atom type (for comparison purposes)
         normalized_atom_type = atom_type.capitalize()
-        # Check if the atom needs to be modified
-        if atom_id in atom_positions:
+
+        # Capping atom override
+        # If this atom_id is listed in capping_link_atoms.dat, replace its
+        # atom_type with the element symbol from that file (e.g. "C" or "N")
+        # regardless of any other logic.
+        if atom_id in capping_link_atoms:
+            atom_type = capping_link_atoms[atom_id]
+
+        # Metal-coordinated atom logic 
+        elif atom_id in atom_positions:
             for metal_index, metal in enumerate(metal_positions):
                 if atom_id in bonds.get(metal, []):
-                    # Store the original atom type before any modification
                     original_atom_type = atom_type
-                    
+
                     if normalized_atom_type in normal_two_letter_elements:
-                        # Use or initialize a counter for this specific non-metal two-letter element
                         if normalized_atom_type not in two_letter_counters:
                             two_letter_counters[normalized_atom_type] = 1
                         new_atom_type = f"{normalized_atom_type}{two_letter_counters[normalized_atom_type]}"
-                        
-                        # Check if this new_atom_type already exists in our comprehensive list
+
                         while new_atom_type in used_atom_types:
                             two_letter_counters[normalized_atom_type] += 1
                             new_atom_type = f"{normalized_atom_type}{two_letter_counters[normalized_atom_type]}"
-                            
+
                         two_letter_counters[normalized_atom_type] += 1
+
                     elif normalized_atom_type in metal_two_letter_elements:
-                        # Keep the metal element unchanged
                         new_atom_type = normalized_atom_type
+
                     else:
-                        # Use the new function to generate a unique atom type
-                        # metal_index+1 to match the new function's expected range (1-12)
-                        new_atom_type = get_unique_new_atom_type(atom_type, metal_index+1)
-                    
+                        new_atom_type = get_unique_new_atom_type(atom_type, metal_index + 1)
+
                     atom_type = new_atom_type
                     new_atom_types.append(new_atom_type)
-                    original_atom_types.append(original_atom_type)  # Store the original atom type
-                    # Store just the letter part of the atom name (remove numbers)
+                    original_atom_types.append(original_atom_type)
                     base_atom_name = ''.join(c for c in atom_name if not c.isdigit())
-                    atom_names.append(base_atom_name)  # Store the corresponding atom name without numbers
+                    atom_names.append(base_atom_name)
                     break
+
         # Reformat the line preserving the original structure
-        updated_line = f"{atom_id:7d} {atom_name:<4s} {x:10.4f} {y:10.4f} {z:10.4f} {atom_type:<6s} {int_number:3d} {name:<4s} {charge:10.6f}\n"
+        updated_line = (
+            f"{atom_id:7d} {atom_name:<4s} {x:10.4f} {y:10.4f} {z:10.4f} "
+            f"{atom_type:<6s} {int_number:3d} {name:<4s} {charge:10.6f}\n"
+        )
         updated_lines.append(updated_line)
-    
+
     # Write the updated content to the new file
     with open(new_file, 'w') as file:
         file.writelines(lines[:atom_start + 1])  # Write everything before atoms
-        file.writelines(updated_lines)  # Write modified atoms
-        file.writelines(lines[bond_start:])  # Write everything after atoms
-    
-    # Write new atom types and original atom types to new_atomtype.dat
+        file.writelines(updated_lines)            # Write modified atoms
+        file.writelines(lines[bond_start:])       # Write everything after atoms
+
+    # Write new atom types to new_atomtype.dat
     with open('new_atomtype.dat', 'w') as file:
         for new_type, orig_type in zip(new_atom_types, original_atom_types):
             file.write(f"{new_type} \n")
-    
-    # Write new atom types and original atom types to new_atomtype.dat
+
+    # Write new and original atom types to metalloprotein_atomtype.dat
     with open('metalloprotein_atomtype.dat', 'w') as file:
         for new_type, orig_type in zip(new_atom_types, original_atom_types):
             file.write(f"{new_type} {orig_type}\n")
-    
-    # Write hybridization information to Hybridization_info.dat
+
+    # Write hybridization information to Hybridization_Info.dat
     with open('Hybridization_Info.dat', 'w') as file:
         file.write("addAtomTypes {\n")
         for atom_name, new_atom_type in zip(atom_names, new_atom_types):

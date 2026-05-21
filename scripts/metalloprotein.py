@@ -8,7 +8,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.15 - 17 October 2025                                #
+#                              |  $$$$$$/              Ver. 4.25 - 19 May 2026                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -546,7 +546,6 @@ def extract_non_standard_residues_from_ref(ref_pdb, output_pdb="part_QM.pdb", ou
     with open(ref_pdb, 'r') as f:
         for line in f:
             if line.startswith(("ATOM", "HETATM")):
-                # Fix for issue 17 and 20
                 element = line.split()[-1]
                 resname = line[17:20].strip()
                 chain = line[21:22].strip()
@@ -978,51 +977,41 @@ def generate_easyparm_residues(residue_name_mapping, output_file="easyPARM_resid
 #Generate a PDB file containing all residues except those in part_QM.pdb
 def generate_easyPARM_nonstand_pdb(input_pdb, part_qm_pdb, output_pdb="easynonstands.pdb"):
     try:
-        # Read residues to exclude from part_QM.pdb
-        exclude_residues = set()
+        # Build exclude set from coordinates in part_qm_pdb
+        # Coordinates are the only reliable common field between the two file formats
+        exclude_coords = set()
         with open(part_qm_pdb, 'r') as qm_file:
             for line in qm_file:
                 if line.startswith(("ATOM", "HETATM")):
-                    resname = line[17:20].strip()
-                    chain = line[21:22].strip()
-                    resnum = line[22:26].strip()
-                    exclude_residues.add((resname, chain, resnum))
-        
-        
-        # Track the current residue being processed
-        current_exclude = None
-        
+                    try:
+                        x = round(float(line[30:38].strip()), 3)
+                        y = round(float(line[38:46].strip()), 3)
+                        z = round(float(line[46:54].strip()), 3)
+                        exclude_coords.add((x, y, z))
+                    except ValueError:
+                        continue  # skip malformed lines
+
         with open(input_pdb, 'r') as infile, open(output_pdb, 'w') as outfile:
             for line in infile:
-                # Skip END line
                 if line.startswith("END"):
                     continue
-                
+
                 if line.startswith(("ATOM", "HETATM")):
-                    resname = line[17:20].strip()
-                    chain = line[21:22].strip()
-                    resnum = line[22:26].strip()
-                    
-                    # Check if this is a new residue
-                    current_residue = (resname, chain, resnum)
-                    
-                    # If this residue is in exclude list, mark it to skip all atoms
-                    if current_residue in exclude_residues:
-                        current_exclude = current_residue
+                    try:
+                        x = round(float(line[30:38].strip()), 3)
+                        y = round(float(line[38:46].strip()), 3)
+                        z = round(float(line[46:54].strip()), 3)
+                        coords = (x, y, z)
+                    except ValueError:
+                        outfile.write(line)  # keep malformed lines as-is
                         continue
-                    
-                    # If we were previously excluding and this is a new residue, reset
-                    if current_exclude and current_residue != current_exclude:
-                        current_exclude = None
-                    
-                    # Write the line if not currently excluding
-                    if current_exclude is None:
+
+                    if coords not in exclude_coords:
                         outfile.write(line)
-                
-                # Always write non-residue lines except END
-                elif not line.startswith(("ATOM", "HETATM")):
+
+                else:
                     outfile.write(line)
-        
+
     except Exception as e:
         print(f"Error generating nonstand.pdb: {e}")
         raise

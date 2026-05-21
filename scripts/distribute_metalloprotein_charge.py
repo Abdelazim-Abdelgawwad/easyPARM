@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.20 - 1 January 2026                                 #
+#                              |  $$$$$$/              Ver. 4.25 - 19 May 2026                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -443,12 +443,12 @@ def identify_terminal_residues(structure, standard_residues):
 def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU', 'NA', 'K', 'LI', 'RB', 'CS', 'MG', 'CA', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI', 'LA', 'CE', 'PR', 'ND', 'PM', 'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU', 'FE2', 'FE3', 'FE4', 'CU1', 'CU2', 'MN2', 'MN3', 'MN4', 'CO2', 'CO3', 'NI2', 'NI3', 'V2', 'V3', 'V4', 'V5'], distance_cutoff=2.6):
     parser = PDB.PDBParser(QUIET=True)
     structure = parser.get_structure('protein', input_pdb)
-    
+
     if isinstance(metals, list):
         metals = set(metals)
     elif not isinstance(metals, set):
-        metals = {'MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU', 
-                'NA', 'K', 'CA', 'LI', 'RB', 'CS', 'MG', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI', 
+        metals = {'MN', 'FE', 'CO', 'NI', 'CU', 'ZN', 'MO', 'TC', 'RU', 'RH', 'PD', 'AG', 'W', 'RE', 'OS', 'IR', 'PT', 'AU',
+                'NA', 'K', 'CA', 'LI', 'RB', 'CS', 'MG', 'SR', 'BA', 'V', 'CR', 'CD', 'HG', 'AL', 'GA', 'IN', 'SN', 'PB', 'BI',
                 'LA', 'CE', 'PR', 'ND', 'PM', 'SM', 'EU', 'GD', 'TB', 'DY', 'HO', 'ER', 'TM', 'YB', 'LU'}
 
     standard_residues = {
@@ -460,7 +460,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
             # N-terminal variants
             "NALA", "NARG", "NASH", "NASN", "NASP", "NCYM", "NCYS", "NCYX", "NGLH", "NGLN",
             "NGLU", "NGLY", "NHID", "NHIE", "NHIP", "NHYP", "NILE", "NLEU", "NLYN", "NLYS",
-            "NMET", "NPHE", "NPRO", "NSER", "NTHR", "NTRP", "NTYR", "NVAL", 
+            "NMET", "NPHE", "NPRO", "NSER", "NTHR", "NTRP", "NTYR", "NVAL",
             # C-terminal variants
             "CALA", "CARG", "CASH", "CASN", "CASP", "CCYM", "CCYS", "CCYX", "CGLH", "CGLN",
             "CGLU", "CGLY", "CHID", "CHIE", "CHIP", "CHYP", "CILE", "CLEU", "CLYN", "CLYS",
@@ -480,7 +480,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
     original_order = []
     atoms_data = []
     coordinated_residue_counts = {}
-    
+
     # Analysis phase
     for model in structure:
         for chain in model:
@@ -503,7 +503,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                             for residue2 in chain2:
                                 is_coordinating = False
                                 coordinating_atoms = []
-                                
+
                                 for atom2 in residue2:
                                     distance = np.linalg.norm(metal_coord - atom2.coord)
                                     if distance <= distance_cutoff:
@@ -523,7 +523,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                                 if is_coordinating:
                                     metal_coordination[key]['coordinating_residues'].extend(coordinating_atoms)
                                     residues_to_extract.add((chain2.id, residue2.get_id()))
-                                    
+
                                     if residue2.get_resname() in standard_residues:
                                         coordinated_standard_residues.add((chain2.id, residue2.get_id()))
                                         res_name = residue2.get_resname()
@@ -532,22 +532,21 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
     # Find standard residues linked to non-standard coordinating residues
     heavy_atoms = [atom for model in structure for chain in model for residue in chain for atom in residue if atom.element != 'H']
     ns = PDB.NeighborSearch(heavy_atoms)
-    bond_cutoff = 1.9  # Covalent bond distance cutoff in Å
-    
-    # Find standard residues linked to non-standard coordinating residues
-    nonstandard_coordinating = [(chain_id, res_id) for chain_id, res_id in residues_to_extract 
+    bond_cutoff = 1.9
+
+    nonstandard_coordinating = [(chain_id, res_id) for chain_id, res_id in residues_to_extract
                                 if structure[0][chain_id][res_id].resname not in standard_residues]
-    
+
     for chain_id, res_id in nonstandard_coordinating:
         nonstandard_res = structure[0][chain_id][res_id]
         nonstandard_heavy_atoms = [atom for atom in nonstandard_res if atom.element != 'H']
-        
+
         for atom in nonstandard_heavy_atoms:
             nearby_atoms = ns.search(atom.coord, bond_cutoff, level='A')
             for nearby_atom in nearby_atoms:
                 nearby_res = nearby_atom.get_parent()
                 nearby_chain = nearby_res.get_parent()
-                
+
                 if (nearby_chain.id != chain_id or nearby_res.get_id() != res_id) and nearby_res.resname in standard_residues:
                     nearby_key = (nearby_chain.id, nearby_res.get_id())
                     if nearby_key not in residues_to_extract:
@@ -560,7 +559,7 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
     # Improved cross-residue bond detection
     extracted_atoms = []
     extracted_residue_objects = {}
-    
+
     for model in structure:
         for chain in model:
             for residue in chain:
@@ -568,36 +567,30 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                 if res_key in residues_to_extract:
                     extracted_residue_objects[res_key] = residue
                     for atom in residue:
-                        if atom.element != 'H':  # Only include heavy atoms
+                        if atom.element != 'H':
                             extracted_atoms.append(atom)
-    
-    # Use NeighborSearch only on atoms within the extracted residues
+
     ns_extracted = PDB.NeighborSearch(extracted_atoms)
-    
-    # Initialize bond dictionary for extracted residues
+
     cross_residue_bonds = {}
     for res_key in residues_to_extract:
         cross_residue_bonds[res_key] = {}
-    
-    # Detect all cross-residue bonds within the extracted residues
+
     for atom in extracted_atoms:
         res_key = (atom.get_parent().get_parent().id, atom.get_parent().get_id())
         atom_name = atom.name
-        
-        # Initialize entry for this atom if not exists
+
         if atom_name not in cross_residue_bonds[res_key]:
             cross_residue_bonds[res_key][atom_name] = []
-        
-        # Look for nearby atoms that could form bonds
+
         nearby_atoms = ns_extracted.search(atom.coord, bond_cutoff, level='A')
         for nearby_atom in nearby_atoms:
             if nearby_atom == atom:
-                continue  # Skip self
-                
-            nearby_res_key = (nearby_atom.get_parent().get_parent().id, 
+                continue
+
+            nearby_res_key = (nearby_atom.get_parent().get_parent().id,
                              nearby_atom.get_parent().get_id())
-            
-            # Only record if it's a different residue
+
             if nearby_res_key != res_key:
                 cross_residue_bonds[res_key][atom_name].append(nearby_atom)
 
@@ -624,27 +617,24 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                 })
                 atoms_data.append({
                     'atomic_number': get_atomic_number(element),
-                    'is_standard': 0 if is_standard else 0
+                    'is_standard': 0
                 })
 
             # Add terminal groups for standard residues that coordinate with metals
             if (chain_id, res_id) in coordinated_standard_residues:
                 res_key = (chain_id, res_id)
-                
+
                 # Check if N atom needs acetylation
                 n_atom, n_bonded = get_local_environment(residue, "N", max_bond_distance=1.6)
                 if n_atom is not None:
                     needs_acetyl = True
-                    
-                    # Check if N already has cross-residue bonds within the extracted residues
+
                     if "N" in cross_residue_bonds[res_key] and cross_residue_bonds[res_key]["N"]:
-                        # N has bonds to another residue within our selection
                         needs_acetyl = False
-                    
-                    # Alternatively, check if N already has 3+ total bonds (already capped or part of chain)
+
                     if len(n_bonded) >= 3:
                         needs_acetyl = False
-                        
+
                     if needs_acetyl:
                         c_pos, o_pos, ch3_pos, h_positions = calculate_acetyl_group(n_atom, n_bonded)
                         if c_pos is not None:
@@ -654,21 +644,18 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                                 'resname': residue.resname, 'resnum': res_id[1],
                                 'is_capping': True
                             })
-                            
                             # Add O
                             terminal_modifications.append({
                                 'element': 'O', 'coord': o_pos, 'name': 'OAC',
                                 'resname': residue.resname, 'resnum': res_id[1],
                                 'is_capping': True
                             })
-                            
                             # Add methyl carbon
                             terminal_modifications.append({
                                 'element': 'C', 'coord': ch3_pos, 'name': 'CME',
                                 'resname': residue.resname, 'resnum': res_id[1],
                                 'is_capping': True
                             })
-                            
                             # Add methyl hydrogens
                             for i, h_pos in enumerate(h_positions):
                                 terminal_modifications.append({
@@ -681,18 +668,13 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                 c_atom, c_bonded = get_local_environment(residue, "C", max_bond_distance=1.6)
                 if c_atom is not None:
                     needs_amination = True
-                    
-                    # Check if C already has cross-residue bonds within the extracted residues
+
                     if "C" in cross_residue_bonds[res_key] and cross_residue_bonds[res_key]["C"]:
-                        # C has bonds to another residue within our selection
                         needs_amination = False
-                    
-                    # For C atom in standard residues, it should have 3 bonds if capped (CA, O, NH2)
-                    # or 3 bonds if part of a peptide chain (CA, O, next residue's N)
-                    # If it only has 2 bonds (likely CA and O), it needs capping
+
                     if len(c_bonded) >= 3:
                         needs_amination = False
-                        
+
                     if needs_amination:
                         n_pos, h_positions = calculate_amino_group(c_atom, c_bonded)
                         if n_pos is not None:
@@ -702,7 +684,6 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
                                 'resname': residue.resname, 'resnum': res_id[1],
                                 'is_capping': True
                             })
-                            
                             # Add H atoms
                             for i, h_pos in enumerate(h_positions):
                                 terminal_modifications.append({
@@ -713,15 +694,15 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
 
     # Add terminal modifications to all_atoms
     all_atoms.extend(terminal_modifications)
-    
+
     # Add terminal modifications to atoms_data for charge calculations
     for mod in terminal_modifications:
         atoms_data.append({
             'atomic_number': get_atomic_number(mod['element']),
-            'is_standard': 1  # Capping groups always marked as standard
+            'is_standard': 1
         })
 
-    # Write initial_structure.xyz
+    # Write reference_structure.xyz
     with open('reference_structure.xyz', 'w') as f:
         f.write(f"{len(all_atoms)}\n\n")
         for atom in all_atoms:
@@ -734,23 +715,48 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
     with open('processed_charges.dat', 'w') as charge_file:
         if len(atoms_data) != len(mol2_charges):
             raise Exception(f"Number of atoms mismatch: Structure has {len(atoms_data)}, MOL2 has {len(mol2_charges)}")
-            
+
         for i, atom_data in enumerate(atoms_data):
             charge = 0.000000 if atom_data['is_standard'] == 1 else mol2_charges[i]
             charge_file.write(f"{charge:.6f}\n")
 
+    # Write capping_link_atoms.dat
+    # Read reference_structure.xyz as the single source of truth for atom ordering.
+    # Skip the two header lines, count every atom line (1-based), and record the
+    # index of any CAPPING atom whose name is CAC (acetyl carbonyl C) or NT (amino N).
+    with open('reference_structure.xyz', 'r') as xyz, \
+         open('capping_link_atoms.dat', 'w') as out:
+
+        atom_index = 0
+        for line in xyz:
+            parts = line.split()
+            # Skip header lines: the count line (single integer) and the blank comment line
+            if len(parts) < 6:
+                continue
+            if parts[0].lstrip('-').replace('.', '', 1).isdigit():
+                continue
+
+            atom_index += 1
+            atom_name  = parts[4]           # column 5: CAC, OAC, CME, NT, HT1 ...
+            is_capping = 'CAPPING' in parts  # last column present only on capping lines
+
+            if is_capping and atom_name == 'CAC':
+                out.write(f"{atom_index} C\n")
+            elif is_capping and atom_name == 'NT':
+                out.write(f"{atom_index} N\n")
+
     # Generate summary of coordinated residues
     coordinated_residue_list = [(res_name, count) for res_name, count in coordinated_residue_counts.items()]
-    
+
     # Write coordination analysis
     with open('coordination_analysis.txt', 'w') as f:
         f.write("Metal Coordination Analysis\n")
         f.write("==========================\n\n")
-        
+
         for metal_key, info in metal_coordination.items():
             f.write(f"Metal: {info['metal_element']} (Coordination number: {info['coordination_number']})\n")
             f.write("Coordinating residues:\n")
-            
+
             for res in info['coordinating_residues']:
                 f.write(f"  {res['residue_name']} {res['residue_number']} "
                        f"(Chain {res['chain']}) - {res['atom_name']} "
@@ -760,10 +766,11 @@ def analyze_and_extract_metal_site(input_pdb, mol2_file, metals=['MN', 'FE', 'CO
         f.write("\nCAPPING Group Additions:\n")
         f.write("=====================\n")
         acetyl_count = sum(1 for atom in terminal_modifications if atom['name'] in ['CAC', 'CME'])
-        amino_count = sum(1 for atom in terminal_modifications if atom['name'] == 'NT')
-        f.write(f"Total acetyl groups added: {acetyl_count//2}\n")  # Each acetyl has CO and methyl C
+        amino_count  = sum(1 for atom in terminal_modifications if atom['name'] == 'NT')
+        f.write(f"Total acetyl groups added: {acetyl_count//2}\n")
         f.write(f"Total amino groups added: {amino_count}\n")
         f.write(f"Total additional atoms added: {len(terminal_modifications)}\n\n")
+
     with open('terminal_info.dat', 'w') as f:
         for (chain_id, res_id), terminal_type in terminal_info.items():
             f.write(f"{chain_id} {res_id[1]} {terminal_type}\n")

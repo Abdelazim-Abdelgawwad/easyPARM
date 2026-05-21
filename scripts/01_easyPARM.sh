@@ -9,7 +9,7 @@
 # |  $$$$$$$|  $$$$$$$ /$$$$$$$/|  $$$$$$$| $$      | $$  | $$| $$  | $$| $$ \/  | $$                             #
 #  \_______/ \_______/|_______/  \____  $$|__/      |__/  |__/|__/  |__/|__/     |__/                             #
 #                               /$$  | $$                                                                         #
-#                              |  $$$$$$/              Ver. 4.20 - 1 January 2026                                 #
+#                              |  $$$$$$/              Ver. 4.25 - 19 May 2026                                    #
 #                               \______/                                                                          #
 #                                                                                                                 #
 # Developer: Abdelazim M. A. Abdelgawwad.                                                                         #
@@ -1252,6 +1252,7 @@ fi
 for script in 06_get_atom_type.py 07_Seminario_forcefield.py 08_update_forcefield.py 09_clean_updatedforcefield.py 10_postclean_updatedforcefield.py 11_retrieve_uffdata.py 13_final_clean.py; do
     if [ -f "$SCRIPT_DIR/$script" ]; then
         python3 "$SCRIPT_DIR/$script" "$RUN_DIR"
+
         if [ $? -ne 0 ]; then
             echo "Failed to execute $script. Exiting."
             exit 1
@@ -1263,41 +1264,10 @@ for script in 06_get_atom_type.py 07_Seminario_forcefield.py 08_update_forcefiel
 done
 
 # Change the name of output
-mv filtered_COMPLEX_modified2.frcmod COMPLEX.frcmod
+mv spaced_filtered_COMPLEX_modified2.frcmod COMPLEX.frcmod
 cp NEW_COMPLEX.mol2 COMPLEX.mol2 
 
-awk '
-/^ANGLE/,/^DIHE/ {
-if ($2 ~ /[0-9]/) {
-    if ($2 < 5) {
-	$2 = $2 * 11.599
-    } else if ($2 < 10) {
-	$2 = $2 * 7.799
-    } else if ($2 < 20) {
-	$2 = $2 * 3.599
-    } else if ($2 < 29) {
-	$2 = $2 * 2.699
-    }
-}
-print
-next
-}
-{ print }' "$RUN_DIR/COMPLEX.frcmod" > "$RUN_DIR/temp.frcmod"
-mv "$RUN_DIR/temp.frcmod" "$RUN_DIR/COMPLEX.frcmod"
-
-awk '
-/^BOND/,/^ANGLE/ {
-if ($2 ~ /[0-9]/) {
-    if ($2 < 20) {
-	$2 = $2 * 4.599
-    }
-}
-print
-next
-}
-{ print }' "$RUN_DIR/COMPLEX.frcmod" > "$RUN_DIR/temp.frcmod"
-mv "$RUN_DIR/temp.frcmod" "$RUN_DIR/COMPLEX.frcmod"
-
+python3 "$SCRIPT_DIR/update_if_needed.py" "$RUN_DIR/COMPLEX.frcmod"
 
 # Function to process metalloprotein parameters (frcmod)
 process_metalloprotein_parm() {
@@ -1415,6 +1385,7 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choic
 	    echo "Bond Information          : Bond_Info_${resid_name}.dat"
 	    echo "Lib    		    	  : COMPLEX.lib"
 	    echo "New Atom Type             : Hybridization_Info_${resid_name}.dat"
+	    echo "Tleap Input   		  : Tleap.input"
 	    if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]]; then
 		    echo "MetalloProtein pdb        : easyPARM_MetalloProtein_${resid_name}.pdb"
 	    fi
@@ -1422,12 +1393,13 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choic
 		    echo "MetalloProtein pdb        : easyPARM_MetalloNucleic_${resid_name}.pdb"
 	    fi
     else
-	    echo "Mol2                          : METAL.mol2"
-	    echo "Bond Information        	: Bond_Info.dat"
-	    echo "Frcmod                  	: COMPLEX.frcmod"
-	    echo "New Atom Type           	: Hybridization_Info.dat"
-	    echo "Lib    			: COMPLEX.lib"
-	    echo "MetalloProtein pdb        	: easyPARM_MetalloProtein.pdb"
+	    echo "Mol2                      : METAL.mol2"
+	    echo "Bond Information          : Bond_Info.dat"
+	    echo "Frcmod                    : COMPLEX.frcmod"
+	    echo "New Atom Type             : Hybridization_Info.dat"
+	    echo "Lib    		    	  : COMPLEX.lib"
+	    echo "MetalloProtein pdb        : easyPARM_MetalloProtein.pdb"
+	    echo "Tleap Input               : Tleap.input"
     fi
 else 
     	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
@@ -1445,6 +1417,7 @@ else
 	echo "PDB    		: COMPLEX.pdb"
 	echo "Lib    		: COMPLEX.lib"
     	echo "New Atom Type	: Hybridization_Info.dat"
+	echo "Tleap Input   	: tleap.input"
 
 fi	
 
@@ -1472,6 +1445,55 @@ if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choic
 		rm "$RUN_DIR/COMPLEX.frcmod"
 		rm "$RUN_DIR/METAL.mol2"
 	fi
+	# Generation of tleap input
+	echo "source leaprc.gaff2" > tleap.input
+	echo "source leaprc.water.tip3p" >> tleap.input
+        echo " " >> tleap.input
+	echo "loadamberparams frcmod.ionsjc_tip3p" >> tleap.input
+        echo " " >> tleap.input
+	echo "# Load force field for residues and metal" >> tleap.input
+	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
+		echo "loadamberparams COMPLEX_${resid_name}.frcmod" >> tleap.input
+	else
+		echo "loadamberparams COMPLEX.frcmod" >> tleap.input
+	fi
+        echo " " >> tleap.input
+	echo "# Modify the system force field to your preferred version; for example, use ff14SB instead of ff19SB." >> tleap.input
+	if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] ; then
+		echo "source leaprc.protein.ff19SB " >> tleap.input
+	elif [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]] ; then
+		echo "source leaprc.DNA.OL24 " >> tleap.input
+	fi
+
+        echo " " >> tleap.input
+	echo "# Load library for residues and metal" >> tleap.input
+	echo "loadoff COMPLEX.lib" >> tleap.input 
+	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
+        	echo " " >> tleap.input
+		echo "PRO = loadpdb "easyPARM_MetalloProtein_${resid_name}.pdb"" >> tleap.input
+        	echo " " >> tleap.input
+		cat "$RUN_DIR/Bond_Info_${resid_name}.dat" >> tleap.input  
+        	echo -e "\n" >> tleap.input
+	else
+        	echo " " >> tleap.input
+		echo "PRO = loadpdb "easyPARM_MetalloProtein.pdb"" >> tleap.input
+        	echo " " >> tleap.input
+		cat "$RUN_DIR/Bond_Info.dat" >> tleap.input
+        	echo -e "\n" >> tleap.input
+	fi
+        echo "# Save vacuum files" >> tleap.input
+        echo "savepdb PRO System_vacuum.pdb" >> tleap.input
+	echo "saveamberparm PRO System_vacuum.prmtop System_vacuum.inpcrd" >> tleap.input	
+        echo " " >> tleap.input
+	echo "# Solvate the system" >> tleap.input
+	echo "solvateoct PRO TIP3PBOX 10.0" >> tleap.input
+	echo "addions PRO Cl- 0. " >> tleap.input
+	echo "addions PRO Na+ 0. " >> tleap.input
+        echo " " >> tleap.input
+	echo "# Save solvated files" >> tleap.input
+	echo "saveamberparm PRO System_solvated.prmtop System_solvated.inpcrd" >> tleap.input
+	echo "savepdb PRO System_solvated.pdb" >> tleap.input
+	echo "quit" >> tleap.input
 else 
 	echo "source leaprc.gaff" > input_library.tleap
 	echo "loadamberparams COMPLEX.frcmod" >> input_library.tleap
@@ -1489,6 +1511,37 @@ else
 	if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then 
 		sed -i'' "s/\<mol\>/${resid_name}/g" "$RUN_DIR/COMPLEX.lib"
 	fi
+	# Generation of tleap input
+	echo "source leaprc.gaff2" > tleap.input
+	echo "source leaprc.water.tip3p" >> tleap.input
+        echo " " >> tleap.input
+	echo "loadamberparams frcmod.ionsjc_tip3p" >> tleap.input
+        echo " " >> tleap.input
+	echo "loadamberparams COMPLEX.frcmod" >> tleap.input
+        echo " " >> tleap.input
+	echo "# Uncomment the correct force field with respect to your system" >> tleap.input
+	echo "# Modify the system force field to your preferred version; for example, use ff14SB instead of ff19SB." >> tleap.input
+	echo "#source leaprc.protein.ff19SB " >> tleap.input
+	echo "#source leaprc.DNA.OL24 " >> tleap.input
+        echo " " >> tleap.input
+	echo "# Load library for metal complex" >> tleap.input
+	echo "loadoff COMPLEX.lib" >> tleap.input 
+        echo " " >> tleap.input
+	echo "PRO = loadpdb "Your_Whole_System.pdb"" >> tleap.input
+        echo " " >> tleap.input
+        echo "# Save vacuum files" >> tleap.input
+        echo "savepdb PRO System_vacuum.pdb" >> tleap.input
+	echo "saveamberparm PRO System_vacuum.prmtop System_vacuum.inpcrd" >> tleap.input	
+        echo " " >> tleap.input
+	echo "# Solvate the system" >> tleap.input
+	echo "solvateoct PRO TIP3PBOX 10.0" >> tleap.input
+	echo "addions PRO Cl- 0. " >> tleap.input
+	echo "addions PRO Na+ 0. " >> tleap.input
+        echo " " >> tleap.input
+	echo "# Save solvated files" >> tleap.input
+	echo "saveamberparm PRO System_solvated.prmtop System_solvated.inpcrd" >> tleap.input
+	echo "savepdb PRO System_solvated.pdb" >> tleap.input
+	echo "quit" >> tleap.input
 
 fi
 
@@ -1533,25 +1586,42 @@ files_to_remove=("dihedral.dat" "distance.dat" "esout" "atom_type.dat" "COMPLEX_
     "complex.fchk" "forcefield2.dat" "metal_number.dat" "temp_COMPLEX_modified.frcmod" "new_atomtype.dat" \
     "temp.dat" "updated_COMPLEX_modified.frcmod" "updated_COMPLEX_modified2.frcmod" "angle.dat" "new_atomtype1.dat"\
     "qout" "punch" "QOUT" "ATOMTYPE.INF" "leap.log" "updated_updated_COMPLEX_modified2.frcmod" "metals_complete.dat" "more_metal.dat" "new_atomtype2.dat" "REF_COMPLEX.mol2" "limited_data.dat" "mol.pdb" "line_number.dat" "ONE.mol2" "Reference_atom_type.dat" "REFQM.pdb" "NEW_COMPLEX.mol2"\
-    "QM.pdb" "nonstand.pdb" "part_QM.xyz" "part_QM.pdb" "charge_qm.dat" "metalloprotein.pdb" "metalloprotein_easyPARM.pdb" "charges_all.dat" "easynonstands.pdb" "easyPARM.pdb" "easyPARM_residues.dat" "reference_structure.xyz" "ALL_RESIDUE_tleap.input" "ZEMA.mol2" "easyPARM_atomtype.dat" "easyPARM.mol2" "COMREF.mol2" "COMPLEX.frcmod.bak" "metalloprotein_atomtype.dat" ) 
+    "QM.pdb" "nonstand.pdb" "easyPARM.pdb" "easynonstands.pdb" "part_QM.xyz" "part_QM.pdb" "charge_qm.dat" "metalloprotein.pdb" "metalloprotein_easyPARM.pdb" "charges_all.dat"  "easyPARM_residues.dat" "reference_structure.xyz" "ALL_RESIDUE_tleap.input" "ZEMA.mol2" "easyPARM_atomtype.dat" "easyPARM.mol2" "COMREF.mol2" "COMPLEX.frcmod.bak" "metalloprotein_atomtype.dat" "filtered_COMPLEX_modified2.frcmod" "capping_link_atoms.dat") 
 
 for file in "${files_to_remove[@]}"; do
     if [ -e "$file" ]; then
         rm -f "$file"
-	
     fi
 done
 
 # Function to check and report low force constants
 check_force_constants() {
     local frcmod_file="$1"
-    local low_constants=$(awk '
-    /^BOND/,/^ANGLE/ {
-        if ($2 ~ /[0-9]/ && $2 < 20) {
-            print $1 " has force constant " $2
-        }
-    }' "$frcmod_file")
-    
+    local low_constants=""
+    local in_bond=0
+
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^BOND ]]; then
+            in_bond=1
+            continue
+        elif [[ "$line" =~ ^ANGLE ]]; then
+            break  # stop at ANGLE section
+        fi
+
+        if (( in_bond )) && [[ "$line" =~ ^[A-Za-z] ]]; then
+            # Capture full atom-pair and force constant from the whole line
+            if [[ "$line" =~ ^([A-Za-z0-9*\'-]+([[:space:]]*-[[:space:]]*[A-Za-z0-9*\'-]+)+)[[:space:]]+([-0-9.]+)[[:space:]]+([-0-9.]+) ]]; then
+                atom_pair="${BASH_REMATCH[1]}"
+                force="${BASH_REMATCH[3]}"
+
+                # Use bc for float comparison
+                if (( $(echo "$force < 20" | bc -l) )); then
+                    low_constants+="  ${atom_pair}  has force constant  ${force}"$'\n'
+                fi
+            fi
+        fi
+    done < "$frcmod_file"
+
     if [ -n "$low_constants" ]; then
         echo "========================================================================="
         echo -e "\n\033[0;31mAbnormally low bond force constants detected!\033[0m"
@@ -1565,8 +1635,12 @@ check_force_constants() {
 }
 
 # Main logic
-if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
-    frcmod_file="$RUN_DIR/COMPLEX_${resid_name}.frcmod"
+if [[ "${metalloprotein_choice,,}" =~ ^(y|yes)$ ]] || [[ "${metallonucleic_choice,,}" =~ ^(y|yes)$ ]]; then
+    if [[ "${resid_ID,,}" =~ ^(y|yes)$ ]]; then
+        frcmod_file="$RUN_DIR/COMPLEX_${resid_name}.frcmod"
+    else
+        frcmod_file="$RUN_DIR/COMPLEX.frcmod"
+    fi
 else
     frcmod_file="$RUN_DIR/COMPLEX.frcmod"
 fi
